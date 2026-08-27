@@ -46,19 +46,80 @@ As linhas 6, 7 e 8 são as três fatias (método hambúrguer) da história gigan
 | Expiração automática da doação (volta à fila) | Medição — é regra derivada ("janela de retirada = validade − tempo de coleta", Aula 2) e ainda não tem o número decidido; falta linha de base para saber quantas horas. |
 
 ## Critérios de aceite
-**História X** — Dado … Quando … Então …
+
+As três histórias abaixo são as que a fatia vertical da iteração 1 (walking skeleton)
+exercita ponta a ponta. Cada critério tem um `it()` correspondente em
+`tests/doacoes.test.js`. A **História #6** é a história zero (★).
+
+**História #1 — o doador publica uma doação**
+
+- Dado que os campos tipo, quantidade e validade estão todos preenchidos, quando o doador
+  publica a doação, então ela passa a aparecer na lista de doações disponíveis.
+- Dado que a doação foi enviada sem um dos campos obrigatórios, quando o doador tenta
+  publicar, então o sistema recusa a publicação e informa qual campo está faltando.
+
+**História #2 — a ONG vê a lista na ordem de publicação**
+
+- Dado que existem duas doações publicadas em momentos diferentes e nenhuma foi aceita
+  ainda, quando a ONG abre a lista de doações disponíveis, então as duas aparecem da mais
+  antiga para a mais recente.
+
+**História #6 (história zero, ★) — a ONG aceita uma doação**
+
+- Dado que existe uma doação publicada e ainda não aceita, quando a ONG a aceita, então a
+  doação deixa de aparecer na lista de disponíveis e passa a constar como aceita por essa ONG.
+- Dado que uma doação já foi aceita por uma ONG, quando uma segunda ONG tenta aceitar a
+  mesma doação, então o sistema recusa a segunda tentativa e a doação continua registrada
+  para a primeira ONG.
 
 ## Riscos
+
+Escala usada: probabilidade e impacto em três níveis — **alta / média / baixa**.
+
 | Risco | Probabilidade | Impacto | Mitigação |
 |---|---|---|---|
+| Um integrante fica indisponível na semana da `entrega-1` (03/09 concentra entrega + Prova 1), e o trabalho estava concentrado nele. | Média | Alto | Até 30/08, o Igor registra no README quem é o dono de cada arquivo (`repositorio.js`, `doacoes.js`, testes, cada seção do `analise.md`); a partir daí o grupo abre no máximo 1 PR pequeno por pessoa por dia, para nenhuma tarefa ficar sem um segundo integrante a par. |
+| A fatia mínima não identifica a ONG: qualquer requisição HTTP publica ou aceita uma doação, então uma medição de "qual ONG aceitou" pode sair errada no piloto. | Alta | Médio | Até 30/08, o Renato abre a issue "identificação da ONG no aceite" ligada à fatia 7 e torna o campo `ong` obrigatório no corpo de `POST /api/doacoes/:id/aceitar` (hoje ele assume `'ONG'` por padrão), para que todo aceite no piloto tenha um nome real anotado. |
 
 ## Hipótese e experimento
 
+Acreditamos que o tempo que mais pesa para a comida se perder está **entre a doação ficar
+disponível e uma ONG aceitá-la** — não no deslocamento do voluntário até o local da coleta.
+
+Saberemos que estávamos errados se, nas **10 próximas doações reais** acompanhadas **até
+20/09**, a mediana do intervalo *publicação → aceite* for **menor** que a mediana do
+intervalo *aceite → coleta*.
+
+Como medimos: planilha de 10 linhas, três horários por doação — `criada_em` (já gravado
+pelo walking skeleton na publicação), o horário do aceite (anotado pela ONG ao tocar em
+"Aceitar") e o horário da coleta (anotado por quem retira). Sem software novo; orçamento
+zero.
+
 ## Decisão de análise
-- **Problema:**
+
+- **Problema:** precisávamos definir o recorte da primeira fatia vertical para a iteração 1
+  andar sem travar em escopo — autenticação de doador e de ONG, tela de confirmação antes
+  do aceite e filtro por proximidade estavam todos em aberto no caso.
 - **Alternativas:**
-- **Decisão e justificativa:**
-- **Riscos e limitações:**
+  - **A — fatia mínima:** publicar → listar → aceitar, sem login e sem tela de confirmação.
+    Ganha-se um skeleton demonstrável em uma iteração e a instrumentação dos horários de
+    publicação e de aceite, que faltava desde a Aula 2. Perde-se realismo: qualquer
+    requisição aceita uma doação e "qual ONG" é apenas o texto enviado no corpo.
+  - **B — fatia "gorda":** incluir identificação da ONG e uma confirmação com resumo antes
+    de aceitar. Ganha-se um fluxo mais próximo do produto real. Perde-se: são 2+ iterações,
+    e o caso não define como a ONG se identifica — alto risco de retrabalho quando essa
+    decisão for tomada.
+- **Decisão e justificativa:** escolhemos a **alternativa A**. Ela está ligada ao risco
+  desta entrega (prazo curto, um integrante pode faltar) e ao objetivo de impacto da
+  história-mãe — "reduzir o tempo entre a doação ficar disponível e ser coletada": a fatia
+  mínima já atravessa interface → regra → dados, já exercita a regra central do caso (doação
+  aceita não volta para a lista) e já produz os dois horários que o experimento da hipótese
+  precisa.
+- **Riscos e limitações:** sem autenticação, o aceite não sabe *quem* é a ONG — só registra
+  o texto recebido; a proteção contra aceite duplo é garantida no servidor
+  (`UPDATE ... WHERE status = 'disponivel'`), não por identidade. Filtro por proximidade e
+  expiração automática da doação ficam para as fatias 7 e 8 e dependem de números (endereço
+  estruturado, "janela de retirada = validade − tempo de coleta") ainda não medidos.
 
 ## Uso de IA
 
