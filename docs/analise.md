@@ -4,7 +4,23 @@
 
 ## Problema central
 
+Restaurantes e padarias geram excedentes de comida que ainda podem ser aproveitados, mas
+hoje o repasse a ONGs depende de contato informal (telefone, grupos de WhatsApp) — sem
+visibilidade em tempo real de quem tem o quê disponível nem de quem pode buscar primeiro.
+O resultado é comida perecível vencendo antes de ser coletada, enquanto ONGs perdem
+doações para a demora ou para a falta de aviso. O projeto precisa reduzir o tempo entre a
+doação ficar disponível e ser efetivamente coletada, operando com orçamento próximo de
+zero e sem travar o fluxo em burocracia que a urgência do alimento perecível não permite.
+
 ## Incertezas
+
+- Como doador e ONG se identificam no sistema — o caso não define autenticação.
+- Qual canal de aviso a ONG deve receber quando surgir uma doação do tipo que mais aceita
+  (push, e-mail, WhatsApp) — depende de infraestrutura externa ainda não escolhida.
+- Se a "quantidade" deve virar uma unidade padronizada ou seguir como texto livre.
+- Quantas horas define a janela de retirada (validade − tempo estimado de coleta) — falta
+  uma linha de base medida.
+- Como estruturar endereço/localização para viabilizar o filtro por proximidade.
 
 ## Stakeholders
 | Stakeholder | Interesse | Influência | O que espera |
