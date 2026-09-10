@@ -25,13 +25,32 @@ zero e sem travar o fluxo em burocracia que a urgência do alimento perecível n
 ## Stakeholders
 | Stakeholder | Interesse | Influência | O que espera |
 |---|---|---|---|
+| Doador (restaurante/padaria) | Alta | Média | Publicar uma doação rápido, pelo celular, mesmo com conexão instável |
+| ONG receptora | Alta | Alta | Ver as doações disponíveis em tempo real e conseguir aceitar antes de outra ONG |
+| Voluntário entregador | Média | Baixa | Confirmar a coleta em poucos toques, mesmo na rua com conexão instável |
+| Marta (coordenadora/patrocinadora) | Alta | Alta | Relatório mensal do total coletado, para mostrar impacto e sustentar o financiamento |
+| Vigilância sanitária (regulador) | Média | Alta | Rastreabilidade mínima (tipo, quantidade, validade) de toda doação, para fiscalização |
 
 ## Objetivos de impacto
-1.
-2.
-3.
+1. Reduzir o tempo entre a doação ficar disponível e ser coletada, para que menos comida
+   perecível se perca à espera de retirada.
+2. Aumentar a proporção de doações publicadas que são efetivamente coletadas antes de
+   vencer, em vez de apenas medir quantas doações foram cadastradas.
+3. Gerar dados confiáveis de impacto (nº de doações coletadas, tempos de publicação →
+   aceite → coleta) para sustentar o financiamento do projeto junto a patrocinadores.
 
 ## Regras de negócio
+
+- Uma doação aceita por uma ONG não pode ficar disponível para outra ONG (regra central
+  do caso) — garantida de forma atômica no banco, não apenas checada no código.
+- Toda doação publicada exige tipo, quantidade e validade preenchidos — rastreabilidade
+  mínima cobrada pela vigilância sanitária; falta um campo e a publicação é recusada.
+- A lista de doações disponíveis é ordenada da mais antiga para a mais recente, para não
+  deixar doações perecíveis esquecidas por falta de atenção.
+- O orçamento do projeto está próximo de zero — restrição transversal: nenhuma decisão de
+  escopo pode depender de infraestrutura paga significativa.
+- Aprovação manual de doações não é uma regra do caso (e contradiz a urgência do alimento
+  perecível) — ver seção "Uso de IA", história #5, onde essa regra foi descartada.
 
 ## Histórias de usuário
 | # | História (Como… quero… para…) | INVEST: o que falha | Ação corretiva |
