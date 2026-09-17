@@ -75,6 +75,19 @@ Antes de ligar, a mesma chamada devolvia `404 Branch not protected`, e
 ("Review required" + check `build-e-testes` pendente) até que outro integrante aprove e o
 CI feche verde. Nenhum integrante — incluindo o admin — consegue merge antes disso.
 
+Resultado observado no PR #2, com o CI **já verde**:
+
+```json
+{
+  "mergeStateStatus": "BLOCKED",
+  "reviewDecision": "REVIEW_REQUIRED",
+  "checks": [{ "name": "build-e-testes", "status": "COMPLETED", "conclusion": "SUCCESS" }]
+}
+```
+
+Ou seja: CI verde **não basta**. Enquanto nenhum outro integrante aprovar, o merge
+continua bloqueado — inclusive para o admin, porque `enforce_admins` está ligado.
+
 ## Como qualquer integrante confere
 
 Pela interface: *Settings → Branches → Branch protection rules → `main`*.
