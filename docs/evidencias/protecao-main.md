@@ -23,8 +23,13 @@ de falha: se o Igor faltar, ninguém mais consegue alterar a configuração de p
 o grupo quiser eliminar esse risco, o próprio Igor pode promover um segundo integrante a
 `admin` em *Settings → Collaborators*.
 
-> Observação: no `README.md` o Renato está listado como `@RenatoColin`, mas o usuário
-> efetivamente com acesso ao repositório é **@rcolinneto**. Vale corrigir o README.
+> **Corrigido neste PR:** o `README.md` listava o Renato como `@RenatoColin`, mas quem tem
+> acesso ao repositório é **@rcolinneto**. As duas contas existem no GitHub: `@RenatoColin`
+> é de outra pessoa (nome de exibição "RenatoColin") e `@rcolinneto` tem o nome de exibição
+> "Renato Colin Neto". Isso não era detalhe cosmético — marcar `@RenatoColin` em um pedido
+> de revisão notificaria um desconhecido, e essa conta **não tem permissão para aprovar**
+> nada aqui, então o PR ficaria parado esperando uma aprovação que não pode chegar.
+> **O Renato confirma o usuário dele antes do merge.**
 
 ## O que foi ligado
 

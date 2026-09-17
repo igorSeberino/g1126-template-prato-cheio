@@ -92,3 +92,26 @@ Ver `docs/adr/`.
 ## Critérios de validação do projeto
 
 ## Uso de IA
+
+Nível declarado: **IA como colaboradora** (Aula 3) — o mesmo do `docs/analise.md`.
+
+**O que foi gerado com IA:** a primeira versão das três decisões (D1, D2, D3), das
+alternativas, da coluna de rastreabilidade e da tabela de trade-offs da D2, a partir da
+leitura de `docs/analise.md`, de `src/`, do `.github/workflows/ci.yml` e da retrospectiva
+da iteração 1.
+
+**O que já descartamos do que a IA propôs:** uma quarta decisão, "SQLite ou PostgreSQL".
+Ela não entra aqui porque não é uma decisão que o *caso* nos exige — é uma restrição
+recebida do enunciado da disciplina (a Unidade 3 exige PostgreSQL). O que sobra de decisão
+nossa ali é *como* o PostgreSQL sobe (máquina, contêiner ou serviço gerenciado), e isso
+vira ADR próprio na Unidade 3.
+
+**O que o grupo precisa verificar e assumir antes de fechar o Trabalho 2** — marque e
+assine quem conferiu:
+
+- [ ] A escolha da alternativa **A** na D2 e na D3. São chamadas nossas, não fato técnico:
+      quem defender o trabalho precisa saber dizer por que, e o que faria mudar de ideia.
+- [ ] Os números das duas **condições de disparo** ("mais de 2 aceites com ONG inválida em
+      10 doações"; "pedido de volume por escrito de um patrocinador"). São compromissos que
+      o grupo assume — se ninguém acompanhar, viram letra morta.
+- [ ] A rastreabilidade de cada decisão, conferida linha a linha contra `docs/analise.md`.
