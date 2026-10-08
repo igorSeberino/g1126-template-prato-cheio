@@ -13,8 +13,15 @@
 ## Diagramas
 (contexto + dados ou componentes — em `docs/` ou como imagem)
 
+- [Diagrama de dados](diagramas/dados.md) — schema atual (SQLite) × alvo PostgreSQL, com as
+  divergências em relação a `src/db.js` declaradas.
+
 ## ADRs
 Ver `docs/adr/`.
+
+| ADR | Decisão | Status |
+|---|---|---|
+| [ADR 0001](adr/0001-migracao-sqlite-postgresql.md) | Migrar de SQLite para PostgreSQL na Unidade 3, com PostgreSQL em contêiner | aceito · 08/10/2026 |
 
 ## Requisitos não-funcionais
 | Requisito | Como afeta o design |
