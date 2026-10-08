@@ -1,7 +1,7 @@
 # ADR 0001 — Migrar de SQLite para PostgreSQL na Unidade 3, com PostgreSQL em contêiner
 
 - **Data:** 08/10/2026
-- **Status:** aceito
+- **Status:** substituído por ADR 0002
 
 ## Contexto
 

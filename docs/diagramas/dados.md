@@ -38,3 +38,10 @@ erDiagram
 - **Faltam dados que o backlog pede:** o horário do aceite e o da coleta (história #3 e
   experimento da hipótese) ainda não têm coluna. Hoje eles são anotados na planilha, fora
   do sistema.
+
+## Revisão — 08/10/2026 (ADR 0002)
+
+O ADR 0002 substituiu o ADR 0001 só em **onde** o PostgreSQL roda (instalado em cada
+notebook em vez de contêiner; o CI continua com contêiner). O schema-alvo acima não muda:
+continua PostgreSQL 16, com as mesmas colunas e tipos. As divergências com `src/db.js`
+continuam as listadas acima.

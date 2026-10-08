@@ -21,7 +21,8 @@ Ver `docs/adr/`.
 
 | ADR | Decisão | Status |
 |---|---|---|
-| [ADR 0001](adr/0001-migracao-sqlite-postgresql.md) | Migrar de SQLite para PostgreSQL na Unidade 3, com PostgreSQL em contêiner | aceito · 08/10/2026 |
+| [ADR 0001](adr/0001-migracao-sqlite-postgresql.md) | Migrar de SQLite para PostgreSQL na Unidade 3, com PostgreSQL em contêiner | substituído por ADR 0002 · 08/10/2026 |
+| [ADR 0002](adr/0002-postgresql-instalado-demo-offline.md) | PostgreSQL instalado em cada notebook, não em contêiner (revisão do ADR 0001 após o aviso de demo ao vivo, sem rede garantida) | aceito · 08/10/2026 |
 
 ## Requisitos não-funcionais
 | Requisito | Como afeta o design |
