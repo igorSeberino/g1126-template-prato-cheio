@@ -23,6 +23,23 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 | Renato Colin Neto (@rcolinneto) | Problema central e Incertezas do `docs/analise.md` |
 | Adrian Cesar Gonçalves (@adrian-cesar) | Stakeholders, Objetivos de impacto e Regras de negócio do `docs/analise.md` |
 
+### Trabalho 2 — responsável e revisor por etapa
+
+| Etapa | Responsável (autor do PR) | Revisor | Defende na Aula 10 | PR |
+|---|---|---|---|---|
+| 0 — Organizar e proteger a `main` | Igor | Renato | Igor | #2 |
+| 1 — Decisões de projeto e trade-offs | Igor | Renato | Igor | #2 (texto final no #10) |
+| 2 — Diagramas | Renato | Adrian | Adrian | #9 |
+| 3 — ADRs | Renato | Adrian | Renato | #4 |
+| 4 — Mudança de contexto (4a, 4b, 4c) | Renato | Adrian | Renato | #5, #6 |
+| 5 — Não-funcionais e critérios de validação | Renato | Adrian | Renato | #4, #6 |
+| 6 — Histórias novas | Renato | Gabriel | Gabriel | #7, #8 |
+| 7 — Uso de IA | Renato | Adrian | Adrian | #9 |
+| 8 — Conferência e limite de 4 páginas | Renato | Igor | Igor | #10 |
+| 9 — Entrega (`entrega-2`) | Igor | Gabriel | — | branch `entrega-2` |
+
+Os PRs do Renato foram preparados com IA (Claude) — ver `docs/projeto.md` → `## Uso de IA`.
+
 ## Como rodar
 
 Requisito: **Node.js 22.13 ou superior**. Mais nada — o banco da Unidade 1 é SQLite, embutido no próprio Node.
