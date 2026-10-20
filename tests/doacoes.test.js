@@ -142,6 +142,62 @@ describe('aceitar uma doação', () => {
   });
 });
 
+describe('voluntário marca a doação como coletada', () => {
+  async function publicarEAceitar() {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG A' });
+    return body.id;
+  }
+
+  // Critério de aceite — História #3
+  // Dado que uma doação foi aceita por uma ONG
+  // Quando o voluntário marca a doação como coletada
+  // Então ela passa a constar como coletada, com o horário gravado, e sai da lista de busca
+  it('marca a doação aceita como coletada e grava o horário', async () => {
+    const id = await publicarEAceitar();
+    const aguardando = await request(app).get('/api/doacoes/aceitas');
+    expect(aguardando.body.map((d) => d.id)).toContain(id);
+
+    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('coletada');
+    expect(res.body.ong).toBe('ONG A');
+    expect(Date.parse(res.body.coletada_em)).not.toBeNaN();
+    const depois = await request(app).get('/api/doacoes/aceitas');
+    expect(depois.body.map((d) => d.id)).not.toContain(id);
+  });
+
+  // Critério de aceite — História #3 (conexão instável)
+  // Dado que o voluntário confirmou a coleta sem sinal e o celular enviou mais tarde
+  // Quando a confirmação chega ao servidor
+  // Então o horário gravado é o do evento, não o da sincronização
+  it('grava o horário do evento enviado pelo celular, não o da sincronização', async () => {
+    const id = await publicarEAceitar();
+    const horarioDoEvento = '2026-10-21T14:30:00.000Z';
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ coletada_em: horarioDoEvento });
+
+    expect(res.body.coletada_em).toBe(horarioDoEvento);
+  });
+
+  // Critério de aceite — História #3 (caminho proibido)
+  // Dado que a doação ainda não foi aceita por nenhuma ONG
+  // Quando alguém tenta marcá-la como coletada
+  // Então o sistema recusa e ela continua disponível
+  it('recusa marcar como coletada uma doação que ainda não foi aceita', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({});
+
+    expect(res.status).toBe(400);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body.map((d) => d.id)).toContain(body.id);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Mudança de contexto (Trabalho 2, etapa 4): os testes rodaram na máquina do piloto com a
 // configuração apontando para o banco real, e a limpeza apagou todas as doações.

@@ -113,7 +113,7 @@ Tipo: **V** = verificar (projeto × o que foi especificado) · **C** = cobrir o 
 | # | Tipo | Critério | Fonte | Resposta em 08/10/2026 |
 |:--:|:--:|---|---|:--:|
 | 1 | V | O ADR da migração diz **o que precisa continuar igual** e **qual comando** mostra isso (`npm test` com o mesmo número de testes e `git diff --stat ... -- src/` só com `src/db.js`). | `docs/adr/0001-migracao-sqlite-postgresql.md` → `## Critério de validação`; `docs/adr/0002-postgresql-instalado-demo-offline.md` → `## Critério de validação` | sim |
-| 2 | V | Depois da migração, `npm test` passa com PostgreSQL (`DATABASE_URL` definida) com **8 de 8** testes, e o diff de `src/` mostra só `src/db.js`. | `docs/adr/0001-migracao-sqlite-postgresql.md` → `## Critério de validação`; execução do CI no PR da migração | não — a migração é da Unidade 3 |
+| 2 | V | Depois da migração, `npm test` passa com PostgreSQL (`DATABASE_URL` definida) com **todos** os testes da suíte — incluindo o da proteção do banco real (revisão de 20/10 do ADR 0002) —, e o diff de `src/` mostra só `src/db.js`. | `docs/adr/0001-migracao-sqlite-postgresql.md` → `## Critério de validação`; execução do CI no PR da migração | não — a migração é da Unidade 3 |
 | 3 | V | Só `src/db.js` importa `node:sqlite`, e nenhum arquivo de regra ou rota (`src/doacoes.js`, `src/app.js`) importa `src/db.js`. Confere-se com `grep -rn "node:sqlite\|db.js" src/`. | `src/` | sim |
 | 4 | V | O ADR substituído mantém as seções originais: `git log -p docs/adr/0001-migracao-sqlite-postgresql.md` mostra, depois do commit que o criou, só a linha `Status` alterada; e o ADR novo cita o antigo. | `docs/adr/0001-migracao-sqlite-postgresql.md`; `docs/adr/0002-postgresql-instalado-demo-offline.md` → cabeçalho `Substitui` | sim |
 | 5 | V | Cada ADR tem status e data no cabeçalho e uma seção `## Rastreabilidade` que cita uma regra, restrição ou risco existente em `docs/analise.md`. | `docs/adr/` × `docs/analise.md` → `## Regras de negócio`, `## Riscos` | sim |
@@ -123,6 +123,7 @@ Tipo: **V** = verificar (projeto × o que foi especificado) · **C** = cobrir o 
 | 9 | C | Cada stakeholder de `## Stakeholders` tem ao menos uma história ou decisão que o atende (doador → #1; ONG → #2, #6, #7, #8; voluntário → #3; Marta → #4; vigilância → #5 e regra de campos obrigatórios). | `docs/analise.md` → `## Stakeholders` × `## Histórias de usuário` | sim |
 | 10 | C | Os três horários do experimento da hipótese (publicação, aceite, coleta) têm onde ser gravados no banco. | `docs/diagramas/dados.md`; `docs/analise.md` → `## Hipótese e experimento` | não — só `criada_em` existe (divergência declarada) |
 | 11 | V | Cada integrante registrou o ensaio offline exigido pelo ADR 0002 antes da aula da demo. | `docs/demo.md` → `### Ensaio offline (ADR 0002)` | não — previsto para antes da demo da Unidade 3 |
+| 12 | V | Os testes não conseguem apagar um banco que não seja o de teste: `limparBanco()` recusa qualquer banco diferente de `:memory:`, e o teste `recusa limpar um banco que não é o de teste e não apaga nenhuma doação` passa. *(Mudança de contexto, etapa 4c.)* | `src/db.js` → `limparBanco()`; `tests/doacoes.test.js`; `docs/adr/0002-postgresql-instalado-demo-offline.md` → `## Revisão — 20/10/2026` | sim — PR #5 |
 
 ### Fragilidades apontadas pelo revisor interno
 
