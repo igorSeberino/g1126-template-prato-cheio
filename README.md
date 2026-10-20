@@ -11,7 +11,7 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 - Diego Nessler — @Diegonessler
 - Gabriel Carvalho — @gabrielcarvallho
 - Igor Thiago seberino — @igorSeberino
-- Renato Colin Neto — @RenatoColin
+- Renato Colin Neto — @rcolinneto
 
 ## Contribuições
 
@@ -20,7 +20,7 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 | Diego Nessler (@Diegonessler) | Histórias de usuário e seção "Uso de IA" no `docs/analise.md` (Aula 3) |
 | Gabriel Carvalho (@gabrielcarvallho) | Walking skeleton — implementou `src/doacoes.js` e `src/repositorio.js`, os testes em `tests/doacoes.test.js`, as seções da Aula 4 e a retrospectiva; fez o merge do PR |
 | Igor Seberino (@igorSeberino) | Commit inicial do grupo (README com os integrantes) |
-| Renato Colin Neto (@RenatoColin) | Problema central e Incertezas do `docs/analise.md` |
+| Renato Colin Neto (@rcolinneto) | Problema central e Incertezas do `docs/analise.md` |
 | Adrian Cesar Gonçalves (@adrian-cesar) | Stakeholders, Objetivos de impacto e Regras de negócio do `docs/analise.md` |
 
 ## Como rodar
