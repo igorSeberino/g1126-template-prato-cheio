@@ -113,3 +113,40 @@ O critério do ADR 0001 continua inteiro (7 de 7 testes passando com PostgreSQL,
 O diagrama de dados não muda com esta revisão: muda **onde** o PostgreSQL roda, não o que
 ele guarda. `docs/diagramas/dados.md` ganhou uma nota dizendo isso, e a divergência com o
 `src/db.js` (ainda em SQLite) continua declarada lá.
+
+## Revisão — 20/10/2026
+
+**O que mudou.** O piloto já tinha doações reais cadastradas. Uma pessoa da equipe da Marta
+rodou os testes na máquina do piloto com a configuração apontando para o banco real, e a
+limpeza dos testes (`limparBanco()`) apagou todas as doações. A Marta pediu que isso não
+possa acontecer de novo. Lendo `src/db.js` e `vitest.config.js`, a causa é dupla: o
+`src/db.js` usa `dados.sqlite` (o banco real) sempre que o `vitest.config.js` não é aplicado,
+e o `limparBanco()` fazia `DELETE FROM doacoes` sem conferir qual banco estava aberto.
+
+**A decisão continua: PostgreSQL 16 instalado em cada notebook, contêiner só no CI.** Este
+ADR decide *onde* o PostgreSQL roda, e o incidente não depende disso: com contêiner ou com
+serviço gerenciado, um teste apontado para o banco real apagaria os dados do mesmo jeito.
+Nenhuma das alternativas descartadas evitaria o incidente sozinha, e o motivo da escolha
+(demo ao vivo, sem rede, em qualquer notebook) segue de pé.
+
+**O que o incidente muda nas consequências e no critério de validação:**
+
+- **Proteção já na main (SQLite):** a limpeza recusa qualquer banco que não seja o de teste
+  (`:memory:`), com teste automatizado — PR #5, história da etapa 4b.
+- **Na migração (Unidade 3), a proteção precisa ser reescrita, não só copiada.** Com o
+  PostgreSQL instalado no notebook, o banco de desenvolvimento e o de teste ficam no
+  **mesmo servidor**, e não existe `:memory:`. O banco de teste passa a ser um banco
+  separado, com nome próprio (ex.: `pratocheio_teste`), e a limpeza confere
+  `SELECT current_database()` e recusa qualquer outro nome.
+- **Consequência negativa nova:** cada integrante cria **dois** bancos no PostgreSQL local
+  (desenvolvimento e teste) e o `.env.example` ganha a variável do banco de teste. Quem
+  paga: cada integrante, com mais um passo na instalação; e quem escrever a migração, que
+  porta a proteção junto.
+- **Critério de validação acrescentado:** depois da migração, o teste
+  `recusa limpar um banco que não é o de teste e não apaga nenhuma doação` continua passando
+  no PostgreSQL, adaptado para conferir o nome do banco. O "7 de 7" do critério original
+  passa a ser lido como "todos os testes da suíte", incluindo este.
+
+**Rastreabilidade:** objetivo de impacto 3 de `docs/analise.md` (dados confiáveis de impacto
+para sustentar o financiamento — doações apagadas são impacto perdido) e a restrição da
+vigilância sanitária (rastreabilidade de toda doação publicada, `## Regras de negócio`).
