@@ -10,9 +10,10 @@ erDiagram
         text tipo "obrigatório"
         text quantidade "obrigatório, texto livre (D3)"
         text validade "obrigatório"
-        text status "disponivel | aceita"
+        text status "disponivel | aceita | coletada"
         text ong "nulo até o aceite"
         text criada_em "instante da publicação"
+        text coletada_em "instante da coleta (horário do evento)"
     }
 ```
 
@@ -25,6 +26,7 @@ erDiagram
 | `status` | `TEXT NOT NULL DEFAULT 'disponivel'` | igual |
 | `ong` | `TEXT` | igual |
 | `criada_em` | `TEXT NOT NULL DEFAULT (datetime('now'))` | `TIMESTAMPTZ NOT NULL DEFAULT now()` |
+| `coletada_em` | `TEXT` (nulo até a coleta; ISO 8601 enviado pelo celular) | `TIMESTAMPTZ` |
 
 ## Divergências declaradas
 
@@ -35,9 +37,9 @@ erDiagram
   esse formato, e a planilha do experimento da hipótese (`docs/analise.md` →
   `## Hipótese e experimento`) lê esse campo. Por isso a conversão precisa ser conferida à
   mão na migração.
-- **Faltam dados que o backlog pede:** o horário do aceite e o da coleta (história #3 e
-  experimento da hipótese) ainda não têm coluna. Hoje eles são anotados na planilha, fora
-  do sistema.
+- **Falta um dado que o backlog pede:** o horário do aceite (experimento da hipótese) ainda
+  não tem coluna e segue anotado na planilha. O da coleta já tem: `coletada_em`, da
+  história "voluntário marca a doação como coletada".
 
 ## Revisão — 08/10/2026 (ADR 0002)
 

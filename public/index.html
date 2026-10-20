@@ -32,6 +32,9 @@
   <h2>Doações disponíveis</h2>
   <ul id="lista"></ul>
 
+  <h2>Aguardando coleta</h2>
+  <ul id="aceitas"></ul>
+
   <script>
     async function carregar() {
       const res = await fetch('/api/doacoes');
@@ -50,6 +53,34 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ong: 'Minha ONG' })
+          });
+          carregar();
+        };
+        li.appendChild(botao);
+        lista.appendChild(li);
+      }
+      carregarAceitas();
+    }
+
+    // Voluntário: confirma a coleta em um toque. O horário enviado é o do toque (evento),
+    // mesmo que a conexão instável faça o envio chegar depois.
+    async function carregarAceitas() {
+      const res = await fetch('/api/doacoes/aceitas');
+      const doacoes = await res.json();
+      const lista = document.getElementById('aceitas');
+      lista.innerHTML = doacoes.length
+        ? ''
+        : '<li>Nenhuma doação aguardando coleta.</li>';
+      for (const d of doacoes) {
+        const li = document.createElement('li');
+        li.textContent = `${d.tipo} — ${d.quantidade} (aceita por ${d.ong}) `;
+        const botao = document.createElement('button');
+        botao.textContent = 'Coletada';
+        botao.onclick = async () => {
+          await fetch(`/api/doacoes/${d.id}/coletar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ coletada_em: new Date().toISOString() })
           });
           carregar();
         };

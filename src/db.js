@@ -58,9 +58,16 @@ export async function migrar() {
       validade    TEXT NOT NULL,
       status      TEXT NOT NULL DEFAULT 'disponivel',
       ong         TEXT,
-      criada_em   TEXT NOT NULL DEFAULT (datetime('now'))
+      criada_em   TEXT NOT NULL DEFAULT (datetime('now')),
+      coletada_em TEXT
     )
   `);
+  // Bancos criados antes da história "voluntário marca a doação como coletada" (como o do
+  // piloto, que já tem doações reais) não têm a coluna: ela é acrescentada sem apagar nada.
+  const colunas = conexao().prepare('PRAGMA table_info(doacoes)').all().map((c) => c.name);
+  if (!colunas.includes('coletada_em')) {
+    conexao().exec('ALTER TABLE doacoes ADD COLUMN coletada_em TEXT');
+  }
 }
 
 /**

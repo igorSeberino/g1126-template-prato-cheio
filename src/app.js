@@ -33,5 +33,22 @@ export function criarApp() {
     }
   });
 
+  // História #3 — o voluntário vê o que precisa buscar e confirma a coleta.
+  app.get('/api/doacoes/aceitas', async (req, res) => {
+    try {
+      res.json(await doacoes.listarAceitas());
+    } catch (erro) {
+      res.status(400).json({ erro: erro.message });
+    }
+  });
+
+  app.post('/api/doacoes/:id/coletar', async (req, res) => {
+    try {
+      res.json(await doacoes.marcarColetada(req.params.id, req.body ?? {}));
+    } catch (erro) {
+      res.status(400).json({ erro: erro.message });
+    }
+  });
+
   return app;
 }

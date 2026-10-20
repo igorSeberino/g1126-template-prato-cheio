@@ -39,3 +39,23 @@ export async function aceitar(id, ong) {
   );
   return rows[0];
 }
+
+// Doações aceitas por uma ONG e ainda não coletadas — o que o voluntário precisa buscar.
+export async function listarAceitas() {
+  const { rows } = await query(
+    "SELECT * FROM doacoes WHERE status = 'aceita' ORDER BY id"
+  );
+  return rows;
+}
+
+// Marca a doação como coletada e devolve a linha atualizada.
+// O `AND status = 'aceita'` impede, no próprio banco, coletar uma doação que ainda não foi
+// aceita ou que já foi coletada. O horário vem como parâmetro (o do evento, no celular do
+// voluntário) — nada de função de data do SQLite aqui, para a migração ficar só no db.js.
+export async function marcarColetada(id, coletadaEm) {
+  const { rows } = await query(
+    "UPDATE doacoes SET status = 'coletada', coletada_em = ? WHERE id = ? AND status = 'aceita' RETURNING *",
+    [coletadaEm, id]
+  );
+  return rows[0];
+}
