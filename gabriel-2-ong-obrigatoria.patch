@@ -1,0 +1,95 @@
+diff --git a/public/index.html b/public/index.html
+index a3a6f45..2916187 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -30,6 +30,8 @@
+   </fieldset>
+ 
+   <h2>Doações disponíveis</h2>
++  <label for="ong">Sua ONG (obrigatório para aceitar)</label>
++  <input id="ong" placeholder="Ex.: ONG Bairro Alegre">
+   <ul id="lista"></ul>
+ 
+   <h2>Aguardando coleta</h2>
+@@ -49,11 +51,17 @@
+         const botao = document.createElement('button');
+         botao.textContent = 'Aceitar';
+         botao.onclick = async () => {
+-          await fetch(`/api/doacoes/${d.id}/aceitar`, {
++          const ong = document.getElementById('ong').value.trim();
++          if (!ong) {
++            alert('Informe o nome da sua ONG antes de aceitar.');
++            return;
++          }
++          const res = await fetch(`/api/doacoes/${d.id}/aceitar`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+-            body: JSON.stringify({ ong: 'Minha ONG' })
++            body: JSON.stringify({ ong })
+           });
++          if (!res.ok) alert((await res.json()).erro);
+           carregar();
+         };
+         li.appendChild(botao);
+diff --git a/src/app.js b/src/app.js
+index 5f4d33d..43d3270 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -27,7 +27,7 @@ export function criarApp() {
+ 
+   app.post('/api/doacoes/:id/aceitar', async (req, res) => {
+     try {
+-      res.json(await doacoes.aceitar(req.params.id, req.body?.ong ?? 'ONG'));
++      res.json(await doacoes.aceitar(req.params.id, req.body?.ong));
+     } catch (erro) {
+       res.status(400).json({ erro: erro.message });
+     }
+diff --git a/src/doacoes.js b/src/doacoes.js
+index 9e27607..7684d51 100644
+--- a/src/doacoes.js
++++ b/src/doacoes.js
+@@ -23,7 +23,12 @@ export async function listarDisponiveis() {
+ 
+ // História zero — "uma ONG aceita uma doação".
+ // Regra do caso: uma doação aceita não fica disponível para outra ONG.
++// Decisão D2 (docs/projeto.md): a ONG se identifica pelo nome, obrigatório no aceite —
++// sem ele, a medição de "qual ONG aceitou" do piloto sai errada (Risco #2 da Análise).
+ export async function aceitar(id, ong) {
++  if (ong == null || String(ong).trim() === '') {
++    throw new Error('informe o nome da ONG que está aceitando');
++  }
+   const doacao = await repo.buscarPorId(id);
+   if (!doacao) {
+     throw new Error('doação não encontrada');
+diff --git a/tests/doacoes.test.js b/tests/doacoes.test.js
+index eaa313b..1d6ac00 100644
+--- a/tests/doacoes.test.js
++++ b/tests/doacoes.test.js
+@@ -142,6 +142,27 @@ describe('aceitar uma doação', () => {
+   });
+ });
+ 
++describe('a ONG se identifica no aceite (decisão D2)', () => {
++  // Critério de aceite — decisão D2 / Risco #2 da Análise
++  // Dado que existe uma doação disponível
++  // Quando uma ONG tenta aceitá-la sem informar o nome
++  // Então o sistema recusa e a doação continua disponível
++  it('recusa o aceite sem o nome da ONG e a doação continua disponível', async () => {
++    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
++
++    const semNome = await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({});
++    const emBranco = await request(app)
++      .post(`/api/doacoes/${body.id}/aceitar`)
++      .send({ ong: '   ' });
++
++    expect(semNome.status).toBe(400);
++    expect(semNome.body.erro).toMatch(/nome da ONG/);
++    expect(emBranco.status).toBe(400);
++    const lista = await request(app).get('/api/doacoes');
++    expect(lista.body.map((d) => d.id)).toContain(body.id);
++  });
++});
++
+ describe('voluntário marca a doação como coletada', () => {
+   async function publicarEAceitar() {
+     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);

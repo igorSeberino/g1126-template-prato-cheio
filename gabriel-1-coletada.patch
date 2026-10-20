@@ -1,0 +1,268 @@
+diff --git a/docs/diagramas/dados.md b/docs/diagramas/dados.md
+index 2dcc25b..0e0b410 100644
+--- a/docs/diagramas/dados.md
++++ b/docs/diagramas/dados.md
+@@ -10,9 +10,10 @@ erDiagram
+         text tipo "obrigatório"
+         text quantidade "obrigatório, texto livre (D3)"
+         text validade "obrigatório"
+-        text status "disponivel | aceita"
++        text status "disponivel | aceita | coletada"
+         text ong "nulo até o aceite"
+         text criada_em "instante da publicação"
++        text coletada_em "instante da coleta (horário do evento)"
+     }
+ ```
+ 
+@@ -25,6 +26,7 @@ erDiagram
+ | `status` | `TEXT NOT NULL DEFAULT 'disponivel'` | igual |
+ | `ong` | `TEXT` | igual |
+ | `criada_em` | `TEXT NOT NULL DEFAULT (datetime('now'))` | `TIMESTAMPTZ NOT NULL DEFAULT now()` |
++| `coletada_em` | `TEXT` (nulo até a coleta; ISO 8601 enviado pelo celular) | `TIMESTAMPTZ` |
+ 
+ ## Divergências declaradas
+ 
+@@ -35,9 +37,9 @@ erDiagram
+   esse formato, e a planilha do experimento da hipótese (`docs/analise.md` →
+   `## Hipótese e experimento`) lê esse campo. Por isso a conversão precisa ser conferida à
+   mão na migração.
+-- **Faltam dados que o backlog pede:** o horário do aceite e o da coleta (história #3 e
+-  experimento da hipótese) ainda não têm coluna. Hoje eles são anotados na planilha, fora
+-  do sistema.
++- **Falta um dado que o backlog pede:** o horário do aceite (experimento da hipótese) ainda
++  não tem coluna e segue anotado na planilha. O da coleta já tem: `coletada_em`, da
++  história "voluntário marca a doação como coletada".
+ 
+ ## Revisão — 08/10/2026 (ADR 0002)
+ 
+diff --git a/public/index.html b/public/index.html
+index 309e658..a3a6f45 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -32,6 +32,9 @@
+   <h2>Doações disponíveis</h2>
+   <ul id="lista"></ul>
+ 
++  <h2>Aguardando coleta</h2>
++  <ul id="aceitas"></ul>
++
+   <script>
+     async function carregar() {
+       const res = await fetch('/api/doacoes');
+@@ -56,6 +59,34 @@
+         li.appendChild(botao);
+         lista.appendChild(li);
+       }
++      carregarAceitas();
++    }
++
++    // Voluntário: confirma a coleta em um toque. O horário enviado é o do toque (evento),
++    // mesmo que a conexão instável faça o envio chegar depois.
++    async function carregarAceitas() {
++      const res = await fetch('/api/doacoes/aceitas');
++      const doacoes = await res.json();
++      const lista = document.getElementById('aceitas');
++      lista.innerHTML = doacoes.length
++        ? ''
++        : '<li>Nenhuma doação aguardando coleta.</li>';
++      for (const d of doacoes) {
++        const li = document.createElement('li');
++        li.textContent = `${d.tipo} — ${d.quantidade} (aceita por ${d.ong}) `;
++        const botao = document.createElement('button');
++        botao.textContent = 'Coletada';
++        botao.onclick = async () => {
++          await fetch(`/api/doacoes/${d.id}/coletar`, {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({ coletada_em: new Date().toISOString() })
++          });
++          carregar();
++        };
++        li.appendChild(botao);
++        lista.appendChild(li);
++      }
+     }
+ 
+     document.getElementById('publicar').onclick = async () => {
+diff --git a/src/app.js b/src/app.js
+index 7f9f727..5f4d33d 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -33,5 +33,22 @@ export function criarApp() {
+     }
+   });
+ 
++  // História #3 — o voluntário vê o que precisa buscar e confirma a coleta.
++  app.get('/api/doacoes/aceitas', async (req, res) => {
++    try {
++      res.json(await doacoes.listarAceitas());
++    } catch (erro) {
++      res.status(400).json({ erro: erro.message });
++    }
++  });
++
++  app.post('/api/doacoes/:id/coletar', async (req, res) => {
++    try {
++      res.json(await doacoes.marcarColetada(req.params.id, req.body ?? {}));
++    } catch (erro) {
++      res.status(400).json({ erro: erro.message });
++    }
++  });
++
+   return app;
+ }
+diff --git a/src/db.js b/src/db.js
+index a64ec60..867ddf6 100644
+--- a/src/db.js
++++ b/src/db.js
+@@ -58,9 +58,16 @@ export async function migrar() {
+       validade    TEXT NOT NULL,
+       status      TEXT NOT NULL DEFAULT 'disponivel',
+       ong         TEXT,
+-      criada_em   TEXT NOT NULL DEFAULT (datetime('now'))
++      criada_em   TEXT NOT NULL DEFAULT (datetime('now')),
++      coletada_em TEXT
+     )
+   `);
++  // Bancos criados antes da história "voluntário marca a doação como coletada" (como o do
++  // piloto, que já tem doações reais) não têm a coluna: ela é acrescentada sem apagar nada.
++  const colunas = conexao().prepare('PRAGMA table_info(doacoes)').all().map((c) => c.name);
++  if (!colunas.includes('coletada_em')) {
++    conexao().exec('ALTER TABLE doacoes ADD COLUMN coletada_em TEXT');
++  }
+ }
+ 
+ /**
+diff --git a/src/doacoes.js b/src/doacoes.js
+index f46d2dc..9e27607 100644
+--- a/src/doacoes.js
++++ b/src/doacoes.js
+@@ -38,3 +38,33 @@ export async function aceitar(id, ong) {
+   }
+   return aceita;
+ }
++
++// História #3 — "o voluntário confirma a coleta".
++export async function listarAceitas() {
++  return repo.listarAceitas();
++}
++
++// Só uma doação aceita pode ser coletada. O horário gravado é o do evento, enviado pelo
++// celular do voluntário, e não o da sincronização (critério da história #3: conexão
++// instável na rua). Sem horário enviado, vale o horário em que a confirmação chegou.
++export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
++  const horario = coletadaEm ?? new Date().toISOString();
++  if (Number.isNaN(Date.parse(horario))) {
++    throw new Error('horário da coleta inválido');
++  }
++  const doacao = await repo.buscarPorId(id);
++  if (!doacao) {
++    throw new Error('doação não encontrada');
++  }
++  if (doacao.status === 'disponivel') {
++    throw new Error('doação ainda não foi aceita por uma ONG');
++  }
++  if (doacao.status === 'coletada') {
++    throw new Error('doação já foi coletada');
++  }
++  const coletada = await repo.marcarColetada(id, new Date(horario).toISOString());
++  if (!coletada) {
++    throw new Error('doação já foi coletada');
++  }
++  return coletada;
++}
+diff --git a/src/repositorio.js b/src/repositorio.js
+index 0bf723a..1bab60d 100644
+--- a/src/repositorio.js
++++ b/src/repositorio.js
+@@ -39,3 +39,23 @@ export async function aceitar(id, ong) {
+   );
+   return rows[0];
+ }
++
++// Doações aceitas por uma ONG e ainda não coletadas — o que o voluntário precisa buscar.
++export async function listarAceitas() {
++  const { rows } = await query(
++    "SELECT * FROM doacoes WHERE status = 'aceita' ORDER BY id"
++  );
++  return rows;
++}
++
++// Marca a doação como coletada e devolve a linha atualizada.
++// O `AND status = 'aceita'` impede, no próprio banco, coletar uma doação que ainda não foi
++// aceita ou que já foi coletada. O horário vem como parâmetro (o do evento, no celular do
++// voluntário) — nada de função de data do SQLite aqui, para a migração ficar só no db.js.
++export async function marcarColetada(id, coletadaEm) {
++  const { rows } = await query(
++    "UPDATE doacoes SET status = 'coletada', coletada_em = ? WHERE id = ? AND status = 'aceita' RETURNING *",
++    [coletadaEm, id]
++  );
++  return rows[0];
++}
+diff --git a/tests/doacoes.test.js b/tests/doacoes.test.js
+index 3779168..eaa313b 100644
+--- a/tests/doacoes.test.js
++++ b/tests/doacoes.test.js
+@@ -142,6 +142,62 @@ describe('aceitar uma doação', () => {
+   });
+ });
+ 
++describe('voluntário marca a doação como coletada', () => {
++  async function publicarEAceitar() {
++    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
++    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG A' });
++    return body.id;
++  }
++
++  // Critério de aceite — História #3
++  // Dado que uma doação foi aceita por uma ONG
++  // Quando o voluntário marca a doação como coletada
++  // Então ela passa a constar como coletada, com o horário gravado, e sai da lista de busca
++  it('marca a doação aceita como coletada e grava o horário', async () => {
++    const id = await publicarEAceitar();
++    const aguardando = await request(app).get('/api/doacoes/aceitas');
++    expect(aguardando.body.map((d) => d.id)).toContain(id);
++
++    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({});
++
++    expect(res.status).toBe(200);
++    expect(res.body.status).toBe('coletada');
++    expect(res.body.ong).toBe('ONG A');
++    expect(Date.parse(res.body.coletada_em)).not.toBeNaN();
++    const depois = await request(app).get('/api/doacoes/aceitas');
++    expect(depois.body.map((d) => d.id)).not.toContain(id);
++  });
++
++  // Critério de aceite — História #3 (conexão instável)
++  // Dado que o voluntário confirmou a coleta sem sinal e o celular enviou mais tarde
++  // Quando a confirmação chega ao servidor
++  // Então o horário gravado é o do evento, não o da sincronização
++  it('grava o horário do evento enviado pelo celular, não o da sincronização', async () => {
++    const id = await publicarEAceitar();
++    const horarioDoEvento = '2026-10-21T14:30:00.000Z';
++
++    const res = await request(app)
++      .post(`/api/doacoes/${id}/coletar`)
++      .send({ coletada_em: horarioDoEvento });
++
++    expect(res.body.coletada_em).toBe(horarioDoEvento);
++  });
++
++  // Critério de aceite — História #3 (caminho proibido)
++  // Dado que a doação ainda não foi aceita por nenhuma ONG
++  // Quando alguém tenta marcá-la como coletada
++  // Então o sistema recusa e ela continua disponível
++  it('recusa marcar como coletada uma doação que ainda não foi aceita', async () => {
++    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
++
++    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({});
++
++    expect(res.status).toBe(400);
++    const lista = await request(app).get('/api/doacoes');
++    expect(lista.body.map((d) => d.id)).toContain(body.id);
++  });
++});
++
+ // ---------------------------------------------------------------------------
+ // Mudança de contexto (Trabalho 2, etapa 4): os testes rodaram na máquina do piloto com a
+ // configuração apontando para o banco real, e a limpeza apagou todas as doações.
