@@ -27,7 +27,7 @@ export function criarApp() {
 
   app.post('/api/doacoes/:id/aceitar', async (req, res) => {
     try {
-      res.json(await doacoes.aceitar(req.params.id, req.body?.ong ?? 'ONG'));
+      res.json(await doacoes.aceitar(req.params.id, req.body?.ong));
     } catch (erro) {
       res.status(400).json({ erro: erro.message });
     }

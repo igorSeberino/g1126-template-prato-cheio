@@ -142,6 +142,27 @@ describe('aceitar uma doação', () => {
   });
 });
 
+describe('a ONG se identifica no aceite (decisão D2)', () => {
+  // Critério de aceite — decisão D2 / Risco #2 da Análise
+  // Dado que existe uma doação disponível
+  // Quando uma ONG tenta aceitá-la sem informar o nome
+  // Então o sistema recusa e a doação continua disponível
+  it('recusa o aceite sem o nome da ONG e a doação continua disponível', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const semNome = await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({});
+    const emBranco = await request(app)
+      .post(`/api/doacoes/${body.id}/aceitar`)
+      .send({ ong: '   ' });
+
+    expect(semNome.status).toBe(400);
+    expect(semNome.body.erro).toMatch(/nome da ONG/);
+    expect(emBranco.status).toBe(400);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body.map((d) => d.id)).toContain(body.id);
+  });
+});
+
 describe('voluntário marca a doação como coletada', () => {
   async function publicarEAceitar() {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);

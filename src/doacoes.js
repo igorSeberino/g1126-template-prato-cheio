@@ -23,7 +23,12 @@ export async function listarDisponiveis() {
 
 // História zero — "uma ONG aceita uma doação".
 // Regra do caso: uma doação aceita não fica disponível para outra ONG.
+// Decisão D2 (docs/projeto.md): a ONG se identifica pelo nome, obrigatório no aceite —
+// sem ele, a medição de "qual ONG aceitou" do piloto sai errada (Risco #2 da Análise).
 export async function aceitar(id, ong) {
+  if (ong == null || String(ong).trim() === '') {
+    throw new Error('informe o nome da ONG que está aceitando');
+  }
   const doacao = await repo.buscarPorId(id);
   if (!doacao) {
     throw new Error('doação não encontrada');
