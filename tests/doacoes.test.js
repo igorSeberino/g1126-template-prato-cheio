@@ -117,4 +117,21 @@ describe('aceitar uma doação', () => {
 
     expect(res.status).toBe(400);
   });
+
+  // Regra central do caso sob corrida (ADR 0001 · requisito não-funcional 2)
+  // Dado que existe uma doação publicada e ainda não aceita
+  // Quando duas ONGs a aceitam ao mesmo tempo
+  // Então exatamente uma leva e a outra é recusada
+  it('aceita só uma de duas tentativas simultâneas', async () => {
+    const id = await publicar();
+
+    const respostas = await Promise.all([
+      request(app).post(`/api/doacoes/${id}/aceitar`).send({ ong: 'ONG A' }),
+      request(app).post(`/api/doacoes/${id}/aceitar`).send({ ong: 'ONG B' }),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 400]);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body).toHaveLength(0);
+  });
 });

@@ -10,6 +10,25 @@ npm run db:migrar
 npm start
 ```
 
+### Ensaio offline (ADR 0002)
+
+A demo é ao vivo, num notebook sorteado na hora, sem rede garantida. Antes da aula da demo,
+**cada integrante** faz no próprio notebook, com o Wi-Fi desligado e o PostgreSQL 16 local no
+ar (usuário, senha e banco do `.env.example`):
+
+```bash
+npm run db:migrar && npm test && npm start
+curl --fail http://localhost:3000/api/saude   # deve responder {"ok":true}
+```
+
+| Integrante | Data do ensaio | 7/7 testes? | `/api/saude` ok? |
+|---|---|:--:|:--:|
+| Adrian Cesar Gonçalves |  |  |  |
+| Diego Nessler |  |  |  |
+| Gabriel Carvalho |  |  |  |
+| Igor Thiago Seberino |  |  |  |
+| Renato Colin Neto |  |  |  |
+
 ## Roteiro (3 minutos)
 
 | Tempo | O que mostrar | O que se prova |
