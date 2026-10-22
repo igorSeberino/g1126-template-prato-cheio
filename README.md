@@ -1,4 +1,4 @@
-# Prato Cheio — [nome do grupo]
+# Prato Cheio — Grupo de Análise
 
 Projeto da disciplina **Análise, Projeto e Desenvolvimento Ágil**.
 Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
@@ -15,6 +15,8 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 
 ## Contribuições
 
+### Trabalho 1
+
 | Integrante | O que fez (commits reais) |
 |---|---|
 | Diego Nessler (@Diegonessler) | Histórias de usuário e seção "Uso de IA" no `docs/analise.md` (Aula 3) |
@@ -25,21 +27,26 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 
 ### Trabalho 2 — responsável e revisor por etapa
 
-| Etapa | Responsável (autor do PR) | Revisor | Defende na Aula 10 | PR |
-|---|---|---|---|---|
-| 0 — Organizar e proteger a `main` | Igor | Renato | Igor | #2 |
-| 1 — Decisões de projeto e trade-offs | Igor | Renato | Igor | #2 (texto final no #10) |
-| 2 — Diagramas | Renato | Adrian | Adrian | #9 |
-| 3 — ADRs | Renato | Adrian | Renato | #4 |
-| 4 — Mudança de contexto (4a, 4b, 4c) | Renato | Adrian | Renato | #5, #6 |
-| 5 — Não-funcionais e critérios de validação | Renato | Adrian | Renato | #4, #6 |
-| 6 — Histórias novas | Renato | Gabriel | Gabriel | #7, #8 |
-| 7 — Uso de IA | Renato | Adrian | Adrian | #9 |
-| 6 — Histórias novas (relatório mensal da Marta) | Diego | Renato | Diego | `historia/relatorio-mensal-marta` |
-| 8 — Conferência e limite de 4 páginas | Renato | Igor | Igor | #10 |
-| 9 — Entrega (`entrega-2`) | Igor | Gabriel | — | branch `entrega-2` |
+| Etapa | Responsável (autor do PR) | Revisor combinado | Aprovação registrada no GitHub | Defende na Aula 10 | PR |
+|---|---|---|---|---|---|
+| 0 — Organizar e proteger a `main` | Igor | Renato | Renato | Igor | #2 |
+| 1 — Decisões de projeto e trade-offs | Igor | Renato | Renato (#2), Igor (#10) | Igor | #2 (texto final no #10) |
+| 2 — Diagramas | Renato | Adrian | Igor | Adrian | #9 |
+| 3 — ADRs | Renato | Adrian | Igor | Renato | #4 |
+| 4 — Mudança de contexto (4a, 4b, 4c) | Renato | Adrian | Igor (#5, que levou o #6) | Renato | #5, #6 |
+| 5 — Não-funcionais e critérios de validação | Renato | Adrian | Igor (#4; #6 via #5) | Renato | #4, #6 |
+| 6 — Histórias novas | Renato | Gabriel | Igor (#7 via #5; #8 via #9) | Gabriel | #7, #8 |
+| 7 — Uso de IA | Renato | Adrian | Igor | Adrian | #9 |
+| 6 — Histórias novas (relatório mensal da Marta) | Diego | Renato | Igor | Diego | #11 |
+| 8 — Conferência e limite de 4 páginas | Renato | Igor | Igor | Igor | #10 |
+| 9 — Entrega (`entrega-2`) | Igor | Gabriel | — (branch, sem PR) | — | branch `entrega-2` |
 
-Os PRs do Renato foram preparados com IA (Claude) — ver `docs/projeto.md` → `## Uso de IA`.
+"Revisor combinado" é a divisão feita no início do trabalho; "Aprovação registrada no GitHub"
+é quem de fato aprovou o PR. Os PRs #6, #7 e #8 foram integrados pelo Gabriel em branches
+intermediárias, sem aprovação registrada, e chegaram à `main` dentro dos PRs #5 e #9, que
+passaram pela proteção da `main` (aprovação + CI verde).
+
+O uso de IA em cada parte do trabalho está registrado em `docs/projeto.md` → `## Uso de IA`.
 
 ## Como rodar
 
@@ -80,10 +87,10 @@ O `src/db.js` foi desenhado para isso: ele expõe `query()` devolvendo `{ rows }
 
 ```
 src/server.js        entrypoint (npm start)
-src/db.js            conexão e schema do banco (pronto)
+src/db.js            conexão, schema e limpeza do banco de teste
 src/app.js           rotas da API
-src/doacoes.js       regras de negócio      <- implementar (U1)
-src/repositorio.js   acesso ao banco (SQL)  <- implementar (U1)
+src/doacoes.js       regras de negócio
+src/repositorio.js   acesso ao banco (SQL)
 public/index.html    interface (funciona no celular)
 tests/               testes automatizados
 docs/analise.md      documento de análise   (Trabalho 1)
@@ -112,13 +119,25 @@ peça a revisão de **outro integrante**. Só então faça o merge.
 
 ## O que já está pronto e o que falta
 
-Pronto: estrutura do projeto, interface básica, rota de saúde, **conexão com o banco e o schema** (`src/db.js`), CI configurado e um teste passando (prova que a aplicação sobe).
+**Pronto (até o Trabalho 2):**
 
-Falta (Trabalho 1 — walking skeleton): implementar `src/doacoes.js` (regras) e
-`src/repositorio.js` (SQL) para que a história zero funcione ponta a ponta —
-**um doador publica uma doação → uma ONG vê a doação → a ONG a aceita e ela sai da lista.**
-Os critérios de aceite estão em `tests/doacoes.test.js` como `it.todo`: troque cada um
-por um teste de verdade conforme implementa.
+- História zero ponta a ponta: o doador publica → a ONG vê a lista → a ONG aceita e a
+  doação sai da lista, com o aceite único garantido no banco (decisão D1), inclusive sob corrida.
+- A ONG informa o nome no aceite (decisão D2), o voluntário marca a doação como coletada
+  com o horário do evento (história #3) e a Marta vê o relatório mensal (história #4).
+- Proteção do banco real: a limpeza dos testes só apaga o banco de teste (mudança de
+  contexto do Trabalho 2).
+- Cada critério de aceite tem teste Dado/Quando/Então em `tests/doacoes.test.js`, rodando
+  no CI a cada PR.
+- Documentos: `docs/analise.md` (Trabalho 1); `docs/projeto.md`, ADRs 0001 e 0002,
+  diagramas e evidência da proteção da `main` (Trabalho 2).
+
+**Falta (Unidade 3 / Trabalho 3):**
+
+- Migrar para PostgreSQL conforme o ADR 0002, com a troca contida em `src/db.js`.
+- Gravar o horário do aceite no banco (critério 8 de `docs/projeto.md`).
+- `docs/validacao.md`, `docs/refatoracoes.md` e `docs/demo.md`, incluindo o ensaio offline
+  de cada integrante.
 
 ## Uso de IA
 

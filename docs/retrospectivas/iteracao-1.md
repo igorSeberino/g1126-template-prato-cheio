@@ -1,6 +1,6 @@
 # Retrospectiva da Iteração 1
 
-- **Data:** 27/08/2026 · **Grupo:** g1126 — Prato Cheio
+- **Data:** 27/08/2026 · **Grupo:** g1126 — Grupo de Análise
 
 ## O que decidimos nesta iteração
 <!-- 2 a 3 decisões que tomamos, não tarefas que fizemos. -->
