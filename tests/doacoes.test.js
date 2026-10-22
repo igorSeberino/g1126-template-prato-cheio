@@ -283,6 +283,65 @@ describe('voluntário marca a doação como coletada', () => {
   });
 });
 
+describe('doador cancela uma doação disponível (decisão D4)', () => {
+  // Critério de aceite — decisão D4
+  // Dado uma doação disponível
+  // Quando o doador a cancela
+  // Então ela fica com status cancelada e sai da lista de disponíveis
+  it('cancela a doação disponível e remove da lista de disponíveis', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app).post(`/api/doacoes/${body.id}/cancelar`).send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('cancelada');
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body.map((d) => d.id)).not.toContain(body.id);
+  });
+
+  // Critério de aceite — decisão D4 (caminho proibido)
+  // Dado uma doação já aceita por uma ONG
+  // Quando o doador tenta cancelá-la
+  // Então o sistema recusa e a doação continua aceita por aquela ONG
+  it('recusa cancelar uma doação que já foi aceita', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG A' });
+
+    const res = await request(app).post(`/api/doacoes/${body.id}/cancelar`).send();
+
+    expect(res.status).toBe(400);
+    const aceitas = await request(app).get('/api/doacoes/aceitas');
+    expect(aceitas.body.map((d) => d.id)).toContain(body.id);
+  });
+
+  // Critério de aceite — decisão D4 (doação inexistente)
+  // Dado que a doação não existe
+  // Quando alguém tenta cancelá-la
+  // Então o sistema devolve 404
+  it('devolve 404 ao tentar cancelar uma doação inexistente', async () => {
+    const res = await request(app).post('/api/doacoes/999999/cancelar').send();
+
+    expect(res.status).toBe(404);
+  });
+
+  // Regra sob corrida, mesma guarda atômica da D1
+  // Dado uma doação disponível
+  // Quando o doador tenta cancelá-la ao mesmo tempo em que uma ONG a aceita
+  // Então exatamente uma das duas tentativas é aceita, nunca as duas
+  it('sob corrida com o aceite, só uma das duas tentativas é aceita', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const respostas = await Promise.all([
+      request(app).post(`/api/doacoes/${body.id}/cancelar`).send(),
+      request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG A' }),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 400]);
+    const { rows } = await query('SELECT status FROM doacoes WHERE id = ?', [body.id]);
+    expect(['cancelada', 'aceita']).toContain(rows[0].status);
+  });
+});
+
 describe('vigilância sanitária: doação vencida', () => {
   // 22/10/2026 às 22h em Brasília — em UTC já é dia 23.
   beforeEach(() => congelarRelogio('2026-10-23T01:00:00Z'));

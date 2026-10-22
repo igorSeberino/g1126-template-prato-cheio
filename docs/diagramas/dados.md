@@ -13,7 +13,7 @@ erDiagram
         text tipo "obrigatório"
         text quantidade "obrigatório, texto livre (D3)"
         text validade "obrigatório"
-        text status "disponivel | aceita | coletada"
+        text status "disponivel | aceita | coletada | cancelada"
         text ong "nulo até o aceite"
         text criada_em "instante da publicação"
         text coletada_em "instante da coleta (horário do evento)"
@@ -33,9 +33,9 @@ erDiagram
 
 ## Divergências entre este diagrama e o `src/db.js`
 
-1. **`status`:** o diagrama admite só três valores (`disponivel`, `aceita`, `coletada`); o
-   `CREATE TABLE` do `src/db.js` aceita qualquer texto (não há `CHECK`). Quem garante os
-   valores é o código de `src/repositorio.js`, não o banco.
+1. **`status`:** o diagrama admite só quatro valores (`disponivel`, `aceita`, `coletada`,
+   `cancelada`); o `CREATE TABLE` do `src/db.js` aceita qualquer texto (não há `CHECK`).
+   Quem garante os valores é o código de `src/repositorio.js`, não o banco.
 2. **`ong`:** o diagrama diz "nulo até o aceite", ou seja, preenchido em toda doação aceita
    (decisão D2); no `src/db.js` a coluna aceita nulo em qualquer status. A regra vive só em
    `src/doacoes.js`.
