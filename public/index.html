@@ -11,8 +11,13 @@
     label { display: block; margin: .5rem 0 .2rem; font-size: .9rem; }
     input, button { font-size: 1rem; padding: .6rem; width: 100%; box-sizing: border-box; }
     button { margin-top: .8rem; cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
     li { border: 1px solid #ddd; border-radius: .5rem; padding: .6rem; margin-bottom: .5rem; list-style: none; }
     ul { padding: 0; }
+    .aviso { margin: .5rem 0; font-size: .9rem; min-height: 1.2em; }
+    .aviso[data-tipo="erro"] { color: #b00020; }
+    .aviso[data-tipo="ok"] { color: #1b6e20; }
+    .aviso[data-tipo="espera"] { color: #7a5200; }
   </style>
 </head>
 <body>
@@ -27,14 +32,17 @@
     <label for="validade">Validade / retirar até</label>
     <input id="validade" type="date">
     <button id="publicar">Publicar</button>
+    <p id="avisoPublicar" class="aviso" role="status" aria-live="polite"></p>
   </fieldset>
 
   <h2>Doações disponíveis</h2>
   <label for="ong">Sua ONG (obrigatório para aceitar)</label>
   <input id="ong" placeholder="Ex.: ONG Bairro Alegre">
+  <p id="avisoLista" class="aviso" role="status" aria-live="polite"></p>
   <ul id="lista"></ul>
 
   <h2>Aguardando coleta</h2>
+  <p id="avisoColeta" class="aviso" role="status" aria-live="polite"></p>
   <ul id="aceitas"></ul>
 
   <fieldset>
@@ -42,13 +50,50 @@
     <label for="mes">Mês</label>
     <input id="mes" type="month">
     <button id="gerarRelatorio">Ver relatório</button>
-    <p id="relatorio"></p>
+    <p id="relatorio" class="aviso" role="status" aria-live="polite"></p>
   </fieldset>
 
   <script>
+    // O doador e o voluntário usam o celular com conexão instável (restrição do caso).
+    // Por isso toda ação mostra o resultado, trava o botão enquanto envia (um toque duplo
+    // não cria doação duplicada) e diz o que fazer quando não há conexão.
+
+    function avisar(id, texto, tipo = 'erro') {
+      const el = document.getElementById(id);
+      el.textContent = texto;
+      el.dataset.tipo = tipo;
+    }
+
+    // Envia JSON e devolve { ok, status, corpo }. Sem conexão, o fetch lança um erro.
+    async function enviar(url, dados) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      const corpo = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, corpo };
+    }
+
+    async function buscar(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => ({}))).erro || 'o servidor recusou o pedido');
+      }
+      return res.json();
+    }
+
+    // O seletor de data não oferece dia que já passou (o servidor também recusa).
+    document.getElementById('validade').min = new Date().toLocaleDateString('en-CA');
+
     async function carregar() {
-      const res = await fetch('/api/doacoes');
-      const doacoes = await res.json();
+      let doacoes;
+      try {
+        doacoes = await buscar('/api/doacoes');
+      } catch {
+        avisar('avisoLista', 'Sem conexão: não deu para atualizar a lista. Tente de novo em instantes.');
+        return;
+      }
       const lista = document.getElementById('lista');
       lista.innerHTML = doacoes.length
         ? ''
@@ -58,31 +103,47 @@
         li.textContent = `${d.tipo} — ${d.quantidade} (até ${d.validade}) `;
         const botao = document.createElement('button');
         botao.textContent = 'Aceitar';
-        botao.onclick = async () => {
-          const ong = document.getElementById('ong').value.trim();
-          if (!ong) {
-            alert('Informe o nome da sua ONG antes de aceitar.');
-            return;
-          }
-          const res = await fetch(`/api/doacoes/${d.id}/aceitar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ong })
-          });
-          if (!res.ok) alert((await res.json()).erro);
-          carregar();
-        };
+        botao.onclick = () => aceitar(d, botao);
         li.appendChild(botao);
         lista.appendChild(li);
       }
       carregarAceitas();
     }
 
-    // Voluntário: confirma a coleta em um toque. O horário enviado é o do toque (evento),
-    // mesmo que a conexão instável faça o envio chegar depois.
+    async function aceitar(d, botao) {
+      const campoOng = document.getElementById('ong');
+      const ong = campoOng.value.trim();
+      if (!ong) {
+        avisar('avisoLista', 'Informe o nome da sua ONG antes de aceitar.');
+        campoOng.focus();
+        return;
+      }
+      botao.disabled = true;
+      botao.textContent = 'Aceitando…';
+      try {
+        const r = await enviar(`/api/doacoes/${d.id}/aceitar`, { ong });
+        if (r.ok) avisar('avisoLista', `Doação aceita: ${d.tipo}. Ela foi para "Aguardando coleta".`, 'ok');
+        else avisar('avisoLista', r.corpo.erro || 'Não foi possível aceitar a doação.');
+      } catch {
+        avisar('avisoLista', 'Sem conexão: o aceite não foi enviado. Tente de novo.');
+      }
+      carregar();
+    }
+
+    // Voluntário: confirma a coleta em um toque. O horário enviado é o do primeiro toque
+    // (o evento), mesmo que, sem sinal na rua, o envio só dê certo minutos depois.
+    const horarioDaColeta = {}; // id da doação -> horário do primeiro toque
+    const enviando = new Set(); // ids com envio em andamento
+    const ESPERAS_S = [2, 5, 10, 20, 40]; // novas tentativas sem conexão (~1 min no total)
+
     async function carregarAceitas() {
-      const res = await fetch('/api/doacoes/aceitas');
-      const doacoes = await res.json();
+      let doacoes;
+      try {
+        doacoes = await buscar('/api/doacoes/aceitas');
+      } catch {
+        avisar('avisoColeta', 'Sem conexão: não deu para atualizar a lista de coleta.');
+        return;
+      }
       const lista = document.getElementById('aceitas');
       lista.innerHTML = doacoes.length
         ? ''
@@ -91,46 +152,96 @@
         const li = document.createElement('li');
         li.textContent = `${d.tipo} — ${d.quantidade} (aceita por ${d.ong}) `;
         const botao = document.createElement('button');
-        botao.textContent = 'Coletada';
-        botao.onclick = async () => {
-          await fetch(`/api/doacoes/${d.id}/coletar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ coletada_em: new Date().toISOString() })
-          });
-          carregar();
+        botao.disabled = enviando.has(d.id);
+        botao.textContent = enviando.has(d.id) ? 'Enviando…' : 'Coletada';
+        botao.onclick = () => {
+          horarioDaColeta[d.id] ??= new Date().toISOString();
+          enviando.add(d.id);
+          botao.disabled = true;
+          botao.textContent = 'Enviando…';
+          enviarColeta(d, 0);
         };
         li.appendChild(botao);
         lista.appendChild(li);
       }
     }
 
-    document.getElementById('publicar').onclick = async () => {
-      await fetch('/api/doacoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: document.getElementById('tipo').value,
-          quantidade: document.getElementById('quantidade').value,
-          validade: document.getElementById('validade').value
-        })
-      });
-      carregar();
+    async function enviarColeta(d, tentativa) {
+      const horario = horarioDaColeta[d.id];
+      try {
+        const r = await enviar(`/api/doacoes/${d.id}/coletar`, { coletada_em: horario });
+        if (r.status < 500) {
+          // Respondeu (com sucesso ou recusa): não adianta tentar de novo.
+          enviando.delete(d.id);
+          delete horarioDaColeta[d.id];
+          if (r.ok) avisar('avisoColeta', `Coleta registrada: ${d.tipo}.`, 'ok');
+          else avisar('avisoColeta', r.corpo.erro || 'Não foi possível registrar a coleta.');
+          carregar();
+          return;
+        }
+      } catch {
+        // Sem conexão: tenta de novo abaixo, com o mesmo horário.
+      }
+      const hora = new Date(horario).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      if (tentativa >= ESPERAS_S.length) {
+        enviando.delete(d.id);
+        avisar('avisoColeta', `Sem conexão: a coleta de ${d.tipo} ainda não foi registrada. ` +
+          `Toque em "Coletada" de novo quando tiver sinal — o horário (${hora}) continua guardado.`);
+        carregarAceitas();
+        return;
+      }
+      avisar('avisoColeta', `Sem conexão. Nova tentativa em ${ESPERAS_S[tentativa]} s; ` +
+        `o horário da coleta (${hora}) está guardado.`, 'espera');
+      setTimeout(() => enviarColeta(d, tentativa + 1), ESPERAS_S[tentativa] * 1000);
+    }
+
+    // Publicar não tenta de novo sozinho: se o primeiro envio chegou e só a resposta se
+    // perdeu, uma nova tentativa criaria doação duplicada. O doador decide.
+    document.getElementById('publicar').onclick = async (evento) => {
+      const botao = evento.currentTarget;
+      const campos = ['tipo', 'quantidade', 'validade'].map((id) => document.getElementById(id));
+      botao.disabled = true;
+      botao.textContent = 'Publicando…';
+      try {
+        const r = await enviar('/api/doacoes', {
+          tipo: campos[0].value,
+          quantidade: campos[1].value,
+          validade: campos[2].value
+        });
+        if (r.ok) {
+          avisar('avisoPublicar', `Doação publicada: ${r.corpo.tipo}.`, 'ok');
+          for (const campo of campos) campo.value = '';
+          carregar();
+        } else {
+          avisar('avisoPublicar', r.corpo.erro || 'Não foi possível publicar.');
+        }
+      } catch {
+        avisar('avisoPublicar', 'Sem conexão: a doação não foi publicada. Confira o sinal e toque em Publicar de novo.');
+      } finally {
+        botao.disabled = false;
+        botao.textContent = 'Publicar';
+      }
     };
 
     // Marta: doações coletadas no mês, por ONG, e o tempo típico da publicação à coleta.
     document.getElementById('gerarRelatorio').onclick = async () => {
       const mes = document.getElementById('mes').value;
-      const res = await fetch(`/api/relatorios/mensal?mes=${encodeURIComponent(mes)}`);
-      const r = await res.json();
-      const saida = document.getElementById('relatorio');
-      if (!res.ok) { saida.textContent = r.erro; return; }
+      let r;
+      try {
+        r = await buscar(`/api/relatorios/mensal?mes=${encodeURIComponent(mes)}`);
+      } catch (erro) {
+        // TypeError = o fetch não chegou ao servidor; o resto é a recusa do servidor.
+        avisar('relatorio', erro instanceof TypeError
+          ? 'Sem conexão: não deu para gerar o relatório.'
+          : erro.message);
+        return;
+      }
       const ongs = Object.entries(r.por_ong).map(([ong, n]) => `${ong}: ${n}`).join(', ');
-      saida.textContent = `${r.coletadas} doações coletadas` +
+      avisar('relatorio', `${r.coletadas} ${r.coletadas === 1 ? 'doação coletada' : 'doações coletadas'}` +
         (ongs ? ` (${ongs})` : '') +
         (r.mediana_horas_publicacao_ate_coleta !== null
           ? ` · mediana de ${r.mediana_horas_publicacao_ate_coleta} h da publicação à coleta`
-          : '');
+          : ''), 'ok');
     };
 
     carregar();
