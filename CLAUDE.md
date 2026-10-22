@@ -54,7 +54,8 @@ critério de validação de `docs/projeto.md`:
   **4 páginas** (ADRs e diagramas ficam fora do limite).
 - **ADR:** as seções originais **nunca** são editadas. Decisão que muda → o antigo recebe só
   `Status: substituído por ADR 000N` e o novo cita o antigo. Decisão que continua → entra
-  `## Revisão — <data>` no fim do mesmo ADR. Novo ADR parte de `docs/adr/0000-modelo-adr.md`.
+  `## Revisão — <data>` no fim do mesmo ADR. Novo ADR segue `.claude/skills/adr/modelo.md`
+  (o `docs/adr/0000-modelo-adr.md` não tem a seção `## Critério de validação`, que é obrigatória).
 - **Diagramas** (`docs/diagramas/`): começam com **Pergunta**, **Decisão que sustenta** e
   **Situação**; toda seta rotulada; no máximo 9 elementos. Mudou o schema → atualize
   `dados.md` ou declare a divergência com o `src/db.js`.
@@ -69,6 +70,18 @@ critério de validação de `docs/projeto.md`:
    o que veio da IA e o que o autor mudou ou conferiu.
 3. Check `build-e-testes` verde e aprovação de **outro integrante**. Revisão de IA não conta.
 4. O branch `entrega-N` congela a entrega: não commite nele depois do prazo.
+
+## Skills do projeto (`.claude/skills/`)
+
+Use a skill que corresponde ao pedido. Cada uma segue as regras deste arquivo.
+
+| Skill | Quando usar |
+|---|---|
+| `nova-historia` | implementar uma história ou corrigir um bug, do teste ao PR |
+| `adr` | criar, substituir ou revisar um ADR |
+| `revisar-pr` | preparar a revisão do PR de um colega (quem aprova é o integrante) |
+| `conferir-entrega` | conferir uma entrega contra o enunciado, sem alterar nada |
+| `preparar-defesa` | montar a folha de cola da defesa individual |
 
 ## Como o Claude deve trabalhar aqui
 

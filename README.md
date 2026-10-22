@@ -125,3 +125,11 @@ por um teste de verdade conforme implementa.
 A IA pode participar da produção, mas o grupo é responsável por verificar, testar,
 corrigir e **defender** o resultado. Registre em cada Pull Request o que foi gerado
 com IA e o que vocês alteraram.
+
+### Claude Code no projeto
+
+Quem usa o Claude Code neste repositório segue as mesmas regras e procedimentos:
+
+- `CLAUDE.md` — regras do projeto (arquitetura, testes, ADR, fluxo de PR).
+- `.claude/skills/` — passo a passo das tarefas recorrentes: `nova-historia`, `adr`,
+  `revisar-pr`, `conferir-entrega` e `preparar-defesa`. O índice está em `.claude/README.md`.
