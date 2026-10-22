@@ -30,6 +30,8 @@
   </fieldset>
 
   <h2>Doações disponíveis</h2>
+  <label for="ong">Sua ONG (obrigatório para aceitar)</label>
+  <input id="ong" placeholder="Ex.: ONG Bairro Alegre">
   <ul id="lista"></ul>
 
   <h2>Aguardando coleta</h2>
@@ -49,11 +51,17 @@
         const botao = document.createElement('button');
         botao.textContent = 'Aceitar';
         botao.onclick = async () => {
-          await fetch(`/api/doacoes/${d.id}/aceitar`, {
+          const ong = document.getElementById('ong').value.trim();
+          if (!ong) {
+            alert('Informe o nome da sua ONG antes de aceitar.');
+            return;
+          }
+          const res = await fetch(`/api/doacoes/${d.id}/aceitar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ong: 'Minha ONG' })
+            body: JSON.stringify({ ong })
           });
+          if (!res.ok) alert((await res.json()).erro);
           carregar();
         };
         li.appendChild(botao);

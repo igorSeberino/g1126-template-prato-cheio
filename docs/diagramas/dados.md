@@ -1,7 +1,10 @@
 # Diagrama de dados — Prato Cheio
 
-**Pergunta que este diagrama responde:** o que o banco guarda de cada doação, e o que muda
-nele quando o banco sair de SQLite para PostgreSQL (ADR 0001)?
+**Pergunta:** o que o banco guarda de cada doação, e o que muda nele quando o banco sair de SQLite para PostgreSQL?
+
+**Decisão que sustenta:** ADR 0001/0002 (migração na Unidade 3, contida em `src/db.js`) e D3 (`quantidade` em texto livre).
+
+**Situação:** retrato da `main` no commit `cb16555` (diagrama e coluna "Hoje"); a coluna "Alvo" é proposta do ADR 0001.
 
 ```mermaid
 erDiagram
@@ -28,22 +31,27 @@ erDiagram
 | `criada_em` | `TEXT NOT NULL DEFAULT (datetime('now'))` | `TIMESTAMPTZ NOT NULL DEFAULT now()` |
 | `coletada_em` | `TEXT` (nulo até a coleta; ISO 8601 enviado pelo celular) | `TIMESTAMPTZ` |
 
-## Divergências declaradas
+## Divergências entre este diagrama e o `src/db.js`
 
-- **O código ainda não foi migrado.** O `src/db.js` continua em `node:sqlite`; a tabela
-  "Alvo" é o que o ADR 0001 decide, não o que roda hoje.
-- **`criada_em` muda de formato.** Em SQLite é texto `AAAA-MM-DD HH:MM:SS` (UTC); em
-  PostgreSQL vira `TIMESTAMPTZ` e chega na API como ISO 8601. Nenhum teste atual confere
-  esse formato, e a planilha do experimento da hipótese (`docs/analise.md` →
-  `## Hipótese e experimento`) lê esse campo. Por isso a conversão precisa ser conferida à
-  mão na migração.
-- **Falta um dado que o backlog pede:** o horário do aceite (experimento da hipótese) ainda
-  não tem coluna e segue anotado na planilha. O da coleta já tem: `coletada_em`, da
-  história "voluntário marca a doação como coletada".
+1. **`status`:** o diagrama admite só três valores (`disponivel`, `aceita`, `coletada`); o
+   `CREATE TABLE` do `src/db.js` aceita qualquer texto (não há `CHECK`). Quem garante os
+   valores é o código de `src/repositorio.js`, não o banco.
+2. **`ong`:** o diagrama diz "nulo até o aceite", ou seja, preenchido em toda doação aceita
+   (decisão D2); no `src/db.js` a coluna aceita nulo em qualquer status. A regra vive só em
+   `src/doacoes.js`.
+3. **Datas:** o diagrama trata `validade`, `criada_em` e `coletada_em` como instantes; o
+   `src/db.js` guarda as três como `TEXT`, e em formatos diferentes: `criada_em` sai do
+   SQLite como `AAAA-MM-DD HH:MM:SS`, `coletada_em` chega do celular em ISO 8601. Nada no
+   banco confere ou normaliza esses valores — na migração para `TIMESTAMPTZ` a conversão
+   precisa ser conferida à mão.
+
+**Notas (não são divergências do diagrama):** o código ainda não foi migrado — a coluna
+"Alvo" é decisão, não o que roda; e o horário do aceite (experimento da hipótese) ainda não
+tem coluna e segue anotado na planilha.
 
 ## Revisão — 08/10/2026 (ADR 0002)
 
 O ADR 0002 substituiu o ADR 0001 só em **onde** o PostgreSQL roda (instalado em cada
 notebook em vez de contêiner; o CI continua com contêiner). O schema-alvo acima não muda:
-continua PostgreSQL 16, com as mesmas colunas e tipos. As divergências com `src/db.js`
-continuam as listadas acima.
+continua PostgreSQL 16, com as mesmas colunas e tipos. As divergências com o `src/db.js`
+estão listadas acima.

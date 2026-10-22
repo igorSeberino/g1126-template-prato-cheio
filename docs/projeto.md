@@ -80,10 +80,15 @@ falta pode ser recuperada manualmente nas 10 doações do experimento. Já o ret
 linha 6 e a decisão operacional em aberto da linha 3 **não** são recuperáveis depois.
 
 ## Diagramas
-(contexto + dados ou componentes — em `docs/` ou como imagem)
 
-- [Diagrama de dados](diagramas/dados.md) — schema atual (SQLite) × alvo PostgreSQL, com as
-  divergências em relação a `src/db.js` declaradas.
+- [Diagrama de contexto](diagramas/contexto.md) — os cinco atores, o que cada um troca com o sistema, e a vigilância sanitária.
+- [Diagrama de dados](diagramas/dados.md) — a tabela `doacoes` hoje (SQLite) e o alvo PostgreSQL do ADR 0001.
+
+**Divergências entre o diagrama de dados e o `src/db.js`:**
+
+1. `status` — o diagrama admite só `disponivel | aceita | coletada`; o banco aceita qualquer texto (sem `CHECK`).
+2. `ong` — o diagrama a exige em toda doação aceita (D2); o banco aceita nulo em qualquer status, e a regra fica só em `src/doacoes.js`.
+3. Datas — o diagrama as trata como instantes; o banco guarda `TEXT` em dois formatos (`criada_em` do SQLite, `coletada_em` em ISO 8601), sem conferência.
 
 ## ADRs
 Ver `docs/adr/`.
@@ -125,66 +130,19 @@ Tipo: **V** = verificar (projeto × o que foi especificado) · **C** = cobrir o 
 | 11 | V | Cada integrante registrou o ensaio offline exigido pelo ADR 0002 antes da aula da demo. | `docs/demo.md` → `### Ensaio offline (ADR 0002)` | não — previsto para antes da demo da Unidade 3 |
 | 12 | V | Os testes não conseguem apagar um banco que não seja o de teste: `limparBanco()` recusa qualquer banco diferente de `:memory:`, e o teste `recusa limpar um banco que não é o de teste e não apaga nenhuma doação` passa. *(Mudança de contexto, etapa 4c.)* | `src/db.js` → `limparBanco()`; `tests/doacoes.test.js`; `docs/adr/0002-postgresql-instalado-demo-offline.md` → `## Revisão — 20/10/2026` | sim — PR #5 |
 
-### Fragilidades apontadas pelo revisor interno
-
-> **Revisor interno:** [PREENCHER — nome do integrante que não escreveu este checklist].
-> Ele lê só o repositório e comenta no PR do grupo. As duas fragilidades abaixo foram
-> encontradas lendo o repositório e estão **pendentes de confirmação** do revisor no PR: ele
-> confirma, troca ou acrescenta, e o texto daqui é atualizado com o link do comentário dele.
-
-1. **Regra sem teste sob corrida.** "A regra central (aceite único) só era testada com dois
-   aceites **em sequência**. O que a protege numa corrida de verdade é o
-   `AND status = 'disponivel'` do `UPDATE`, e nada falhava se alguém o removesse. Com
-   PostgreSQL e conexões concorrentes (ADR 0001), é justamente aí que a regra quebraria sem
-   ninguém ver." — Fonte: `tests/doacoes.test.js`, `src/repositorio.js`.
-   **Resposta da equipe: corrigida** no commit
-   [`d642de7`](https://github.com/igorSeberino/g1126-template-prato-cheio/commit/d642de7552cdc6b810c18500899f8be7741f6059)
-   (teste `aceita só uma de duas tentativas simultâneas`, que também mede o requisito
-   não-funcional 2). Com ele a suíte passou de 7 para 8 testes: o "7 de 7" escrito nos
-   critérios dos ADRs 0001 e 0002 passa a ser lido como "todos os testes da suíte, 8 de 8
-   hoje". Não editamos os ADRs para isso, porque as seções originais não se reescrevem.
-
-2. **Ponto único de falha no dia da demo.** "O ADR 0002 depende de os cinco notebooks terem
-   o PostgreSQL 16 instalado e configurado igual ao `.env.example`, mas nada no repositório
-   mostra que alguém já instalou: a tabela do ensaio offline em `docs/demo.md` está vazia, e
-   o critério 11 está 'não'. Se o sorteado não tiver instalado, a demo para." — Fonte:
-   `docs/adr/0002-postgresql-instalado-demo-offline.md`, `docs/demo.md`.
-   **Resposta da equipe: aceita como limitação.** A migração e a instalação são da Unidade
-   3; hoje não há o que instalar contra o código. Plano: cada integrante preenche a própria
-   linha de `docs/demo.md` antes da aula da demo, e o critério 11 vira "sim" só quando as
-   cinco linhas estiverem preenchidas. Se faltar alguém, outro integrante assume a demo com
-   o próprio notebook (consequência já registrada no ADR 0002).
-
 ## Uso de IA
 
-Nível declarado: **IA como colaboradora** (Aula 3) — o mesmo do `docs/analise.md`.
+Nível declarado: **IA como colaboradora**, o mesmo do `docs/analise.md`. Usamos Claude (Claude Code) em todas as partes: os PRs do Trabalho 2 foram preparados pelo Renato com o Claude, cada um diz no texto o que veio da IA, e o revisor de cada PR conferiu a parte que defende na Aula 10.
 
-**O que foi gerado com IA:** a primeira versão das três decisões (D1, D2, D3), das
-alternativas, da coluna de rastreabilidade e da tabela de trade-offs da D2, a partir da
-leitura de `docs/analise.md`, de `src/`, do `.github/workflows/ci.yml` e da retrospectiva
-da iteração 1.
+| Parte | O que veio da IA | O que o grupo mudou ou conferiu |
+|---|---|---|
+| Decisões D1–D3 e trade-offs | primeira versão das decisões, alternativas e tabela da D2 | descartamos uma 4ª decisão ("SQLite ou PostgreSQL"), que é restrição do enunciado e virou ADR; assumimos as condições de disparo da D2 e da D3 |
+| ADRs 0001/0002, não-funcionais, critérios | rascunhos a partir do repositório e do aviso da Aula 8 | conferimos os números dos não-funcionais (3 s, 9 de 10) e a escolha da instalação nativa |
+| Mudança de contexto (4a, 4b, 4c) | diagnóstico em `src/db.js`, código da trava, teste e revisão do ADR 0002 | reproduzimos o incidente antes e depois da correção; conferimos que nenhuma seção original do ADR foi editada |
+| Histórias novas e diagramas | código, testes, diagrama de contexto e divergências | rodamos os testes e o servidor com um banco antigo do piloto (a coluna nova entra sem apagar dados) |
 
-**O que já descartamos do que a IA propôs:** uma quarta decisão, "SQLite ou PostgreSQL".
-Ela não entra aqui porque não é uma decisão que o *caso* nos exige — é uma restrição
-recebida do enunciado da disciplina (a Unidade 3 exige PostgreSQL). O que sobra de decisão
-nossa ali é *como* o PostgreSQL sobe (máquina, contêiner ou serviço gerenciado), e isso
-vira ADR próprio na Unidade 3.
+**Erros da IA que corrigimos:**
 
-**O que o grupo precisa verificar e assumir antes de fechar o Trabalho 2** — marque e
-assine quem conferiu:
-
-- [ ] A escolha da alternativa **A** na D2 e na D3. São chamadas nossas, não fato técnico:
-      quem defender o trabalho precisa saber dizer por que, e o que faria mudar de ideia.
-- [ ] Os números das duas **condições de disparo** ("mais de 2 aceites com ONG inválida em
-      10 doações"; "pedido de volume por escrito de um patrocinador"). São compromissos que
-      o grupo assume — se ninguém acompanhar, viram letra morta.
-- [ ] A rastreabilidade de cada decisão, conferida linha a linha contra `docs/analise.md`.
-
-**Aula 8 (ADRs, diagrama de dados, não-funcionais e critérios):**
-Nível declarado na Aula 8: **IA para consulta**. Nesta entrega, os rascunhos dos ADRs 0001
-e 0002, do diagrama de dados, dos três requisitos não-funcionais, do checklist e da
-Retrospectiva 2 foram gerados com IA (Claude Code), a partir da leitura do repositório
-(`docs/analise.md`, `src/`, `tests/`, `.github/workflows/ci.yml`) e do aviso de mudança de
-contexto dado em aula. **O que o grupo precisa conferir antes do merge:** os números dos
-requisitos não-funcionais (3 s, 9 de 10), a escolha da instalação nativa no ADR 0002 e as
-duas fragilidades, que só valem depois de confirmadas pelo revisor interno no PR.
+- **Revisor inventado.** A IA escreveu, entre aspas, "fragilidades apontadas pelo revisor interno" antes de qualquer integrante revisar — falas atribuídas a alguém que não tinha dito nada. Removemos a seção: revisão de verdade é a que fica registrada no PR.
+- **Nível de uso subdeclarado.** Um dos blocos declarava "IA para consulta", mas a IA escreveu rascunhos inteiros. Corrigimos para "colaboradora", que é o uso real.
+- **Número que envelhece.** Os ADRs fixaram "7 de 7 testes" no critério de validação; a suíte cresceu. Como as seções originais de um ADR não se editam, o ajuste foi feito na revisão do ADR 0002 e no critério 2 ("todos os testes da suíte").
