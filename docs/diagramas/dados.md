@@ -55,3 +55,8 @@ O ADR 0002 substituiu o ADR 0001 só em **onde** o PostgreSQL roda (instalado em
 notebook em vez de contêiner; o CI continua com contêiner). O schema-alvo acima não muda:
 continua PostgreSQL 16, com as mesmas colunas e tipos. As divergências com o `src/db.js`
 estão listadas acima.
+
+## Revisão — 22/10/2026
+
+O diagrama foi conferido na branch `entrega-2` contra o schema atual de `src/db.js`
+e as decisões registradas em `docs/projeto.md`.

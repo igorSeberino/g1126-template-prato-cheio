@@ -26,3 +26,8 @@ flowchart LR
 ```
 
 **Elementos:** 6 (limite: 9). **Fora da fronteira:** o canal de aviso à ONG (história #8, canal ainda não escolhido) e a planilha do experimento da hipótese, preenchida à mão.
+
+## Revisão — 22/10/2026
+
+O diagrama foi conferido na branch `entrega-2` contra os cinco stakeholders de
+`docs/analise.md` e as decisões registradas em `docs/projeto.md`.
