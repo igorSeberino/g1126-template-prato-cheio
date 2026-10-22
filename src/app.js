@@ -40,6 +40,11 @@ export function criarApp() {
     res.json(await doacoes.aceitar(req.params.id, req.body?.ong));
   }));
 
+  // O doador cancela uma doação que ainda está disponível.
+  app.post('/api/doacoes/:id/cancelar', rota(async (req, res) => {
+    res.json(await doacoes.cancelar(req.params.id));
+  }));
+
   // História #3 — o voluntário vê o que precisa buscar e confirma a coleta.
   app.get('/api/doacoes/aceitas', rota(async (req, res) => {
     res.json(await doacoes.listarAceitas());

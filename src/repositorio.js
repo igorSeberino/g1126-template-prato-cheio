@@ -60,6 +60,17 @@ export async function marcarColetada(id, coletadaEm) {
   return rows[0];
 }
 
+// Marca a doação como cancelada e devolve a linha atualizada.
+// O `AND status = 'disponivel'` garante no banco que só uma doação ainda não aceita possa
+// ser cancelada pelo doador (mesma guarda atômica da decisão D1, reaplicada aqui).
+export async function cancelar(id) {
+  const { rows } = await query(
+    "UPDATE doacoes SET status = 'cancelada' WHERE id = ? AND status = 'disponivel' RETURNING *",
+    [id]
+  );
+  return rows[0];
+}
+
 // Doações coletadas entre dois instantes (ISO 8601, início incluído, fim excluído).
 // Comparação de texto ISO: funciona igual em SQLite e PostgreSQL, sem função de data.
 export async function listarColetadasEntre(inicio, fim) {

@@ -159,6 +159,26 @@ export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
   return coletada;
 }
 
+// "O doador cancela uma doação disponível" — desiste ou corrige um erro de publicação
+// antes que uma ONG aceite. Decisão D4 (docs/projeto.md): mesma guarda atômica da D1
+// (`UPDATE ... WHERE status = 'disponivel'`), para que uma ONG que já aceitou não perca a
+// doação por um cancelamento que chegou depois.
+export async function cancelar(id) {
+  const doacao = await repo.buscarPorId(id);
+  if (!doacao) {
+    throw new NaoEncontrada('doação não encontrada');
+  }
+  if (doacao.status !== 'disponivel') {
+    throw new ErroDeRegra('só é possível cancelar uma doação ainda disponível');
+  }
+  const cancelada = await repo.cancelar(id);
+  if (!cancelada) {
+    // Corrida: a doação foi aceita entre o buscarPorId e o update.
+    throw new ErroDeRegra('só é possível cancelar uma doação ainda disponível');
+  }
+  return cancelada;
+}
+
 // História #4 — "a Marta vê o relatório mensal de doações coletadas".
 // Decisão D3: o relatório conta doações e mede tempos; não soma volume, porque
 // `quantidade` é texto livre ("10 porções", "2 kg").
