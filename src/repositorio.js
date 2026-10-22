@@ -59,3 +59,13 @@ export async function marcarColetada(id, coletadaEm) {
   );
   return rows[0];
 }
+
+// Doações coletadas entre dois instantes (ISO 8601, início incluído, fim excluído).
+// Comparação de texto ISO: funciona igual em SQLite e PostgreSQL, sem função de data.
+export async function listarColetadasEntre(inicio, fim) {
+  const { rows } = await query(
+    "SELECT * FROM doacoes WHERE status = 'coletada' AND coletada_em >= ? AND coletada_em < ? ORDER BY coletada_em",
+    [inicio, fim]
+  );
+  return rows;
+}

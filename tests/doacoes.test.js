@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { criarApp } from '../src/app.js';
-import { migrar, limparBanco, encerrar } from '../src/db.js';
+import { migrar, limparBanco, encerrar, query } from '../src/db.js';
 
 const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
@@ -216,6 +216,64 @@ describe('voluntário marca a doação como coletada', () => {
     expect(res.status).toBe(400);
     const lista = await request(app).get('/api/doacoes');
     expect(lista.body.map((d) => d.id)).toContain(body.id);
+  });
+});
+
+describe('relatório mensal da Marta (história #4)', () => {
+  // Publica, aceita e coleta uma doação, com horários controlados pelo teste.
+  async function doacaoColetada({ ong, criadaEm, coletadaEm }) {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await query('UPDATE doacoes SET criada_em = ? WHERE id = ?', [criadaEm, body.id]);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong });
+    await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ coletada_em: coletadaEm });
+    return body.id;
+  }
+
+  // Critério de aceite — História #4
+  // Dado que houve doações coletadas em outubro e em setembro, e uma aceita sem coleta
+  // Quando a Marta pede o relatório de outubro
+  // Então ele conta só as coletadas em outubro, por ONG, com a mediana de horas
+  //      entre a publicação e a coleta
+  it('conta só as doações coletadas no mês, por ONG, com o tempo até a coleta', async () => {
+    await doacaoColetada({ ong: 'ONG A', criadaEm: '2026-10-05 12:00:00', coletadaEm: '2026-10-05T14:00:00.000Z' });
+    await doacaoColetada({ ong: 'ONG A', criadaEm: '2026-10-10 08:00:00', coletadaEm: '2026-10-10T12:00:00.000Z' });
+    await doacaoColetada({ ong: 'ONG B', criadaEm: '2026-10-20 09:00:00', coletadaEm: '2026-10-20T15:00:00.000Z' });
+    await doacaoColetada({ ong: 'ONG B', criadaEm: '2026-09-15 09:00:00', coletadaEm: '2026-09-15T10:00:00.000Z' });
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG C' });
+
+    const res = await request(app).get('/api/relatorios/mensal?mes=2026-10');
+
+    expect(res.status).toBe(200);
+    expect(res.body.coletadas).toBe(3);
+    expect(res.body.por_ong).toEqual({ 'ONG A': 2, 'ONG B': 1 });
+    expect(res.body.mediana_horas_publicacao_ate_coleta).toBe(4); // 2 h, 4 h e 6 h
+  });
+
+  // Critério de aceite — História #4 (virada do mês)
+  // Dado que uma doação foi coletada às 23h30 de 31/10 no horário de Brasília
+  // Quando a Marta pede os relatórios de outubro e de novembro
+  // Então a coleta conta em outubro, e não em novembro (em UTC já seria 1º/11)
+  it('conta a coleta no mês de Brasília, mesmo quando em UTC já virou o mês', async () => {
+    await doacaoColetada({ ong: 'ONG A', criadaEm: '2026-10-31 20:00:00', coletadaEm: '2026-10-31T23:30:00-03:00' });
+
+    const outubro = await request(app).get('/api/relatorios/mensal?mes=2026-10');
+    const novembro = await request(app).get('/api/relatorios/mensal?mes=2026-11');
+
+    expect(outubro.body.coletadas).toBe(1);
+    expect(novembro.body.coletadas).toBe(0);
+    expect(novembro.body.mediana_horas_publicacao_ate_coleta).toBeNull();
+  });
+
+  // Critério de aceite — História #4 (caminho proibido)
+  // Dado que o mês não está no formato AAAA-MM
+  // Quando a Marta pede o relatório
+  // Então o sistema recusa e diz o formato esperado
+  it('recusa um mês fora do formato AAAA-MM', async () => {
+    const res = await request(app).get('/api/relatorios/mensal?mes=outubro');
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/AAAA-MM/);
   });
 });
 

@@ -50,5 +50,14 @@ export function criarApp() {
     }
   });
 
+  // História #4 — relatório mensal da Marta. Ex.: /api/relatorios/mensal?mes=2026-10
+  app.get('/api/relatorios/mensal', async (req, res) => {
+    try {
+      res.json(await doacoes.relatorioMensal(req.query.mes));
+    } catch (erro) {
+      res.status(400).json({ erro: erro.message });
+    }
+  });
+
   return app;
 }
