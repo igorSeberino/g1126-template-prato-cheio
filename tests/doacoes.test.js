@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import request from 'supertest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { criarApp } from '../src/app.js';
 import { migrar, limparBanco, encerrar } from '../src/db.js';
+
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
 const app = criarApp();
 
@@ -133,5 +139,118 @@ describe('aceitar uma doação', () => {
     expect(respostas.map((r) => r.status).sort()).toEqual([200, 400]);
     const lista = await request(app).get('/api/doacoes');
     expect(lista.body).toHaveLength(0);
+  });
+});
+
+describe('voluntário marca a doação como coletada', () => {
+  async function publicarEAceitar() {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'ONG A' });
+    return body.id;
+  }
+
+  // Critério de aceite — História #3
+  // Dado que uma doação foi aceita por uma ONG
+  // Quando o voluntário marca a doação como coletada
+  // Então ela passa a constar como coletada, com o horário gravado, e sai da lista de busca
+  it('marca a doação aceita como coletada e grava o horário', async () => {
+    const id = await publicarEAceitar();
+    const aguardando = await request(app).get('/api/doacoes/aceitas');
+    expect(aguardando.body.map((d) => d.id)).toContain(id);
+
+    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('coletada');
+    expect(res.body.ong).toBe('ONG A');
+    expect(Date.parse(res.body.coletada_em)).not.toBeNaN();
+    const depois = await request(app).get('/api/doacoes/aceitas');
+    expect(depois.body.map((d) => d.id)).not.toContain(id);
+  });
+
+  // Critério de aceite — História #3 (conexão instável)
+  // Dado que o voluntário confirmou a coleta sem sinal e o celular enviou mais tarde
+  // Quando a confirmação chega ao servidor
+  // Então o horário gravado é o do evento, não o da sincronização
+  it('grava o horário do evento enviado pelo celular, não o da sincronização', async () => {
+    const id = await publicarEAceitar();
+    const horarioDoEvento = '2026-10-21T14:30:00.000Z';
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ coletada_em: horarioDoEvento });
+
+    expect(res.body.coletada_em).toBe(horarioDoEvento);
+  });
+
+  // Critério de aceite — História #3 (caminho proibido)
+  // Dado que a doação ainda não foi aceita por nenhuma ONG
+  // Quando alguém tenta marcá-la como coletada
+  // Então o sistema recusa e ela continua disponível
+  it('recusa marcar como coletada uma doação que ainda não foi aceita', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({});
+
+    expect(res.status).toBe(400);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body.map((d) => d.id)).toContain(body.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mudança de contexto (Trabalho 2, etapa 4): os testes rodaram na máquina do piloto com a
+// configuração apontando para o banco real, e a limpeza apagou todas as doações.
+// Regra: os testes não conseguem apagar nem alterar dados de um banco que não seja o de
+// teste, seja qual for a máquina ou a configuração.
+// ---------------------------------------------------------------------------
+
+describe('proteção do banco real', () => {
+  // Cria um "banco do piloto" num arquivo temporário, com doações reais, sem passar pelo
+  // src/db.js — e conta as doações direto nele, também sem passar pelo src/db.js.
+  function criarBancoDoPiloto(arquivo) {
+    const banco = new DatabaseSync(arquivo);
+    banco.exec(`
+      CREATE TABLE doacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, quantidade TEXT NOT NULL,
+        validade TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'disponivel', ong TEXT,
+        criada_em TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO doacoes (tipo, quantidade, validade) VALUES ('Pão', '5 kg', '2026-10-21');
+      INSERT INTO doacoes (tipo, quantidade, validade, status, ong)
+        VALUES ('Sopa', '20 porções', '2026-10-22', 'aceita', 'ONG Bairro Alegre');
+    `);
+    banco.close();
+  }
+  function contarDoacoes(arquivo) {
+    const banco = new DatabaseSync(arquivo);
+    const { total } = banco.prepare('SELECT COUNT(*) AS total FROM doacoes').get();
+    banco.close();
+    return total;
+  }
+
+  // Critério de aceite — história da mudança de contexto (etapa 4b)
+  // Dado que o banco em uso não é o de teste
+  // Quando a limpeza é chamada
+  // Então ela falha e nenhuma doação é apagada
+  it('recusa limpar um banco que não é o de teste e não apaga nenhuma doação', async () => {
+    const pasta = mkdtempSync(join(tmpdir(), 'prato-cheio-'));
+    const bancoDoPiloto = join(pasta, 'dados.sqlite');
+    criarBancoDoPiloto(bancoDoPiloto);
+
+    try {
+      // A configuração aponta para o banco real (como na máquina do piloto).
+      await encerrar();
+      vi.stubEnv('DATABASE_FILE', bancoDoPiloto);
+
+      await expect(limparBanco()).rejects.toThrow(/não o banco de teste/);
+
+      await encerrar();
+      expect(contarDoacoes(bancoDoPiloto)).toBe(2);
+    } finally {
+      await encerrar();
+      vi.unstubAllEnvs(); // volta para o ':memory:' do vitest.config.js
+      rmSync(pasta, { recursive: true, force: true });
+    }
   });
 });
