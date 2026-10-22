@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { criarApp } from '../src/app.js';
+import { criarApp, responderErro } from '../src/app.js';
 import { migrar, limparBanco, encerrar, query } from '../src/db.js';
 
 const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
@@ -34,7 +34,20 @@ afterAll(async () => {
   await encerrar();
 });
 
-const doacaoValida = { tipo: 'Sopa', quantidade: '10 porções', validade: '2026-09-30' };
+// Validade bem no futuro: doação vencida não é publicada, e uma data próxima faria os testes
+// quebrarem sozinhos quando ela passasse.
+const doacaoValida = { tipo: 'Sopa', quantidade: '10 porções', validade: '2099-12-31' };
+
+// Congela só o relógio do JavaScript (Date), para testes que dependem de "hoje" ou "agora".
+// O datetime('now') do SQLite continua no relógio real — por isso esses testes gravam o
+// criada_em direto no banco quando ele importa.
+function congelarRelogio(instante) {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(instante));
+}
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('publicar e listar doações', () => {
   // Critério de aceite — História #1
@@ -161,6 +174,21 @@ describe('a ONG se identifica no aceite (decisão D2)', () => {
     const lista = await request(app).get('/api/doacoes');
     expect(lista.body.map((d) => d.id)).toContain(body.id);
   });
+
+  // Critério de aceite — decisão D2 (nome digitado à mão)
+  // Dado que a ONG digitou o nome com espaços sobrando
+  // Quando ela aceita a doação
+  // Então o nome é gravado sem os espaços extras
+  it('grava o nome da ONG sem espaços sobrando', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app)
+      .post(`/api/doacoes/${body.id}/aceitar`)
+      .send({ ong: '  ONG   Bairro Alegre ' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ong).toBe('ONG Bairro Alegre');
+  });
 });
 
 describe('voluntário marca a doação como coletada', () => {
@@ -195,6 +223,7 @@ describe('voluntário marca a doação como coletada', () => {
   // Então o horário gravado é o do evento, não o da sincronização
   it('grava o horário do evento enviado pelo celular, não o da sincronização', async () => {
     const id = await publicarEAceitar();
+    await query('UPDATE doacoes SET criada_em = ? WHERE id = ?', ['2026-10-21 12:00:00', id]);
     const horarioDoEvento = '2026-10-21T14:30:00.000Z';
 
     const res = await request(app)
@@ -217,9 +246,164 @@ describe('voluntário marca a doação como coletada', () => {
     const lista = await request(app).get('/api/doacoes');
     expect(lista.body.map((d) => d.id)).toContain(body.id);
   });
+
+  // Critério de aceite — História #3 (horário impossível)
+  // Dado que uma doação foi publicada e aceita
+  // Quando o celular envia um horário de coleta anterior à publicação
+  // Então o sistema recusa e a doação continua aguardando coleta
+  it('recusa um horário de coleta anterior à publicação da doação', async () => {
+    const id = await publicarEAceitar();
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ coletada_em: '2020-01-01T10:00:00.000Z' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/anterior à publicação/);
+    const aguardando = await request(app).get('/api/doacoes/aceitas');
+    expect(aguardando.body.map((d) => d.id)).toContain(id);
+  });
+
+  // Critério de aceite — História #3 (relógio do celular errado)
+  // Dado que uma doação foi publicada e aceita
+  // Quando o celular envia um horário de coleta mais de 5 minutos no futuro
+  // Então o sistema recusa e a doação continua aguardando coleta
+  it('recusa um horário de coleta no futuro', async () => {
+    const id = await publicarEAceitar();
+    const daquiAUmaHora = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ coletada_em: daquiAUmaHora });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/futuro/);
+    const aguardando = await request(app).get('/api/doacoes/aceitas');
+    expect(aguardando.body.map((d) => d.id)).toContain(id);
+  });
+});
+
+describe('vigilância sanitária: doação vencida', () => {
+  // 22/10/2026 às 22h em Brasília — em UTC já é dia 23.
+  beforeEach(() => congelarRelogio('2026-10-23T01:00:00Z'));
+
+  // Critério de aceite — vigilância sanitária (publicação)
+  // Dado que a validade informada já passou ou não é uma data
+  // Quando o doador tenta publicar
+  // Então o sistema recusa e nada entra na lista
+  it('recusa publicar doação vencida ou com validade que não é data', async () => {
+    const vencida = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, validade: '2026-10-21' });
+    const naoEhData = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, validade: 'amanhã' });
+    const diaQueNaoExiste = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, validade: '2026-02-30' });
+
+    expect(vencida.status).toBe(400);
+    expect(vencida.body.erro).toMatch(/já passou/);
+    expect(naoEhData.status).toBe(400);
+    expect(diaQueNaoExiste.status).toBe(400);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body).toHaveLength(0);
+  });
+
+  // Critério de aceite — vigilância sanitária (lista e aceite)
+  // Dado uma doação com validade de hoje (em Brasília) e outra que venceu ontem
+  // Quando a ONG abre a lista e tenta aceitar a vencida
+  // Então só a de hoje aparece, e o aceite da vencida é recusado
+  it('mostra a doação que vence hoje, esconde a vencida e recusa aceitá-la', async () => {
+    const hoje = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, tipo: 'Pão', validade: '2026-10-22' });
+    // Publicada quando ainda estava na validade; venceu depois.
+    await query("INSERT INTO doacoes (tipo, quantidade, validade) VALUES ('Leite', '3 L', '2026-10-21')");
+    const { rows } = await query("SELECT id FROM doacoes WHERE tipo = 'Leite'");
+
+    const lista = await request(app).get('/api/doacoes');
+    const aceite = await request(app)
+      .post(`/api/doacoes/${rows[0].id}/aceitar`)
+      .send({ ong: 'ONG A' });
+
+    expect(hoje.status).toBe(201);
+    expect(lista.body.map((d) => d.tipo)).toEqual(['Pão']);
+    expect(aceite.status).toBe(400);
+    expect(aceite.body.erro).toMatch(/vencida/);
+  });
+});
+
+describe('a API só aceita os dados no formato certo', () => {
+  // Dado que um campo chega como objeto ou lista, e não como texto
+  // Quando alguém publica, aceita ou pede o relatório
+  // Então o sistema recusa com uma mensagem clara, sem detalhe interno, e nada é gravado
+  it('recusa campos que não são texto, sem gravar nada', async () => {
+    const tipoObjeto = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, tipo: { a: 1 } });
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    const ongLista = await request(app)
+      .post(`/api/doacoes/${body.id}/aceitar`)
+      .send({ ong: ['ONG A', 'ONG B'] });
+    const mesRepetido = await request(app).get('/api/relatorios/mensal?mes=2026-10&mes=2026-11');
+
+    expect(tipoObjeto.status).toBe(400);
+    expect(tipoObjeto.body.erro).toBe('o campo tipo precisa ser texto');
+    expect(ongLista.status).toBe(400);
+    expect(ongLista.body.erro).toBe('o campo ong precisa ser texto');
+    expect(mesRepetido.status).toBe(400);
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body.map((d) => d.id)).toEqual([body.id]);
+  });
+
+  // Dado que o corpo do pedido não é um JSON válido
+  // Quando o doador tenta publicar
+  // Então o sistema responde 400 em JSON (e não uma página de erro em HTML)
+  it('responde 400 em JSON quando o corpo não é JSON válido', async () => {
+    const res = await request(app)
+      .post('/api/doacoes')
+      .set('Content-Type', 'application/json')
+      .send('{"tipo": "Sopa",');
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/JSON/);
+  });
+
+  // Dado que a doação pedida não existe
+  // Quando alguém tenta aceitá-la ou marcá-la como coletada
+  // Então o sistema responde 404
+  it('responde 404 para doação que não existe', async () => {
+    const aceite = await request(app).post('/api/doacoes/999/aceitar').send({ ong: 'ONG A' });
+    const coleta = await request(app).post('/api/doacoes/999/coletar').send({});
+
+    expect(aceite.status).toBe(404);
+    expect(coleta.status).toBe(404);
+  });
+
+  // Dado que acontece um erro inesperado (ex.: o banco falha)
+  // Quando a API responde
+  // Então devolve 500, sem expor SQL nem detalhe interno ao cliente
+  it('responde 500 sem expor o detalhe de um erro inesperado', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = {
+      status(codigo) { this.statusCode = codigo; return this; },
+      json(corpo) { this.body = corpo; return this; }
+    };
+
+    responderErro(res, new Error('SQLITE_ERROR: no such table: doacoes'));
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.erro).not.toMatch(/SQLITE|doacoes/);
+    vi.restoreAllMocks();
+  });
 });
 
 describe('relatório mensal da Marta (história #4)', () => {
+  // As coletas dos testes são de setembro a outubro de 2026: "agora" fica depois delas,
+  // para o teste não depender do dia em que roda.
+  beforeEach(() => congelarRelogio('2026-12-01T12:00:00Z'));
+
   // Publica, aceita e coleta uma doação, com horários controlados pelo teste.
   async function doacaoColetada({ ong, criadaEm, coletadaEm }) {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
@@ -263,6 +447,20 @@ describe('relatório mensal da Marta (história #4)', () => {
     expect(outubro.body.coletadas).toBe(1);
     expect(novembro.body.coletadas).toBe(0);
     expect(novembro.body.mediana_horas_publicacao_ate_coleta).toBeNull();
+  });
+
+  // Critério de aceite — História #4 com a decisão D2 (nome declarado à mão)
+  // Dado que a mesma ONG digitou o nome de jeitos diferentes em coletas do mês
+  // Quando a Marta pede o relatório
+  // Então ela aparece uma vez só, com a grafia da primeira coleta
+  it('conta como uma ONG só os nomes que diferem em maiúsculas, acentos ou espaços', async () => {
+    await doacaoColetada({ ong: 'ONG Esperança', criadaEm: '2026-10-05 12:00:00', coletadaEm: '2026-10-05T14:00:00.000Z' });
+    await doacaoColetada({ ong: '  ong  esperança ', criadaEm: '2026-10-06 12:00:00', coletadaEm: '2026-10-06T14:00:00.000Z' });
+    await doacaoColetada({ ong: 'ONG Esperanca', criadaEm: '2026-10-07 12:00:00', coletadaEm: '2026-10-07T14:00:00.000Z' });
+
+    const res = await request(app).get('/api/relatorios/mensal?mes=2026-10');
+
+    expect(res.body.por_ong).toEqual({ 'ONG Esperança': 3 });
   });
 
   // Critério de aceite — História #4 (caminho proibido)
