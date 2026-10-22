@@ -37,6 +37,14 @@
   <h2>Aguardando coleta</h2>
   <ul id="aceitas"></ul>
 
+  <fieldset>
+    <legend>Relatório do mês</legend>
+    <label for="mes">Mês</label>
+    <input id="mes" type="month">
+    <button id="gerarRelatorio">Ver relatório</button>
+    <p id="relatorio"></p>
+  </fieldset>
+
   <script>
     async function carregar() {
       const res = await fetch('/api/doacoes');
@@ -108,6 +116,21 @@
         })
       });
       carregar();
+    };
+
+    // Marta: doações coletadas no mês, por ONG, e o tempo típico da publicação à coleta.
+    document.getElementById('gerarRelatorio').onclick = async () => {
+      const mes = document.getElementById('mes').value;
+      const res = await fetch(`/api/relatorios/mensal?mes=${encodeURIComponent(mes)}`);
+      const r = await res.json();
+      const saida = document.getElementById('relatorio');
+      if (!res.ok) { saida.textContent = r.erro; return; }
+      const ongs = Object.entries(r.por_ong).map(([ong, n]) => `${ong}: ${n}`).join(', ');
+      saida.textContent = `${r.coletadas} doações coletadas` +
+        (ongs ? ` (${ongs})` : '') +
+        (r.mediana_horas_publicacao_ate_coleta !== null
+          ? ` · mediana de ${r.mediana_horas_publicacao_ate_coleta} h da publicação à coleta`
+          : '');
     };
 
     carregar();
