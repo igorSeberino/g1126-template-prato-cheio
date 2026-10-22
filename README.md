@@ -35,6 +35,7 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 | 5 — Não-funcionais e critérios de validação | Renato | Adrian | Renato | #4, #6 |
 | 6 — Histórias novas | Renato | Gabriel | Gabriel | #7, #8 |
 | 7 — Uso de IA | Renato | Adrian | Adrian | #9 |
+| 6 — Histórias novas (relatório mensal da Marta) | Diego | Renato | Diego | `historia/relatorio-mensal-marta` |
 | 8 — Conferência e limite de 4 páginas | Renato | Igor | Igor | #10 |
 | 9 — Entrega (`entrega-2`) | Igor | Gabriel | — | branch `entrega-2` |
 

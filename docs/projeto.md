@@ -12,7 +12,7 @@
 
 - **D1 → A.** Uma instrução resolve a corrida, funciona igual em SQLite e PostgreSQL (a migração não mexe nela) e é testável em sequência e em paralelo. B só se paga quando o aceite alterar mais de uma tabela; aí a decisão é revista. *Abrimos mão:* a mensagem "já foi aceita" vem de uma leitura anterior, que pode estar velha — por isso o resultado do `UPDATE` é conferido de novo em `doacoes.aceitar`.
 - **D2 → A**, com B **adiada, não descartada**. A elimina o `'ONG'` genérico que o servidor gravava e foi implementada no PR #8. B exige uma decisão operacional que o caso não define (quem cadastra as ONGs e entrega os códigos) e anteciparia a autenticação, ainda incerta. *Condição de disparo:* se mais de 2 das 10 doações do experimento chegarem com nome de ONG inválido, em branco ou duplicado, B entra na iteração seguinte.
-- **D3 → A.** Os objetivos de impacto medem tempo e proporção coletada, não volume, e obrigar o doador a escolher unidade no celular, com comida perecível na mão, é atrito. A vigilância exige o campo preenchido, não numérico. *Condição de disparo:* se um patrocinador pedir volume por escrito, B entra como ADR próprio, porque mexe em schema com dados reais.
+- **D3 → A.** Os objetivos de impacto medem tempo e proporção coletada, não volume, e obrigar o doador a escolher unidade no celular, com comida perecível na mão, é atrito. A vigilância exige o campo preenchido, não numérico. Implementada no relatório mensal da Marta (história #4), que conta doações por ONG e a mediana de horas da publicação à coleta. *Condição de disparo:* se um patrocinador pedir volume por escrito, B entra como ADR próprio, porque mexe em schema com dados reais.
 
 ## Tabela de trade-offs (uma decisão em detalhe)
 

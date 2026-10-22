@@ -4,7 +4,7 @@
 
 **Decisão que sustenta:** D2 e a decisão de análise A (fatia mínima, sem autenticação) — nenhum ator faz login; o sistema confia no nome que a ONG declara no aceite.
 
-**Situação:** retrato da `main` no commit `cb16555`. Só a seta tracejada (relatório para a Marta) é proposta: o relatório mensal ainda não existe.
+**Situação:** retrato da `main` no commit `b15169e` — com o relatório mensal da Marta, nenhuma seta é proposta.
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ flowchart LR
     voluntario -->|"confirma coleta com o horário do evento"| sistema
     vigilancia -->|"exige tipo, quantidade e validade em toda doação"| sistema
     sistema -->|"registro de cada doação, em caso de fiscalização"| vigilancia
-    sistema -.->|"proposta: relatório mensal de doações coletadas"| marta
+    sistema -->|"relatório mensal: doações coletadas por ONG e tempo até a coleta"| marta
 ```
 
 **Elementos:** 6 (limite: 9). **Fora da fronteira:** o canal de aviso à ONG (história #8, canal ainda não escolhido) e a planilha do experimento da hipótese, preenchida à mão.
