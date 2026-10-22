@@ -21,7 +21,7 @@ npm run db:migrar && npm test && npm start
 curl --fail http://localhost:3000/api/saude   # deve responder {"ok":true}
 ```
 
-| Integrante | Data do ensaio | 7/7 testes? | `/api/saude` ok? |
+| Integrante | Data do ensaio | Todos os testes passaram? | `/api/saude` ok? |
 |---|---|:--:|:--:|
 | Adrian Cesar Gonçalves |  |  |  |
 | Diego Nessler |  |  |  |
