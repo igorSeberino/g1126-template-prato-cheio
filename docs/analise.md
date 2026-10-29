@@ -107,6 +107,16 @@ exercita ponta a ponta. Cada critério tem um `it()` correspondente em
   mesma doação, então o sistema recusa a segunda tentativa e a doação continua registrada
   para a primeira ONG.
 
+**História #7 — a ONG filtra as doações por tipo**
+
+- Fatia 1 (filtro pela API): dado que existem doações disponíveis de tipos variados, quando
+  a ONG pede a lista com `?tipo=Sopa`, então só as do tipo Sopa aparecem, na ordem de
+  publicação.
+- Fatia 2 (filtro sem diferença de maiúsculas e acentos): dado uma doação do tipo "Pão",
+  quando a ONG filtra por "pao", então ela aparece.
+- Fatia 3 (filtro na tela): dado que a ONG está na tela de doações disponíveis, quando
+  escolhe um tipo, então a lista mostra só as daquele tipo.
+
 ## Riscos
 
 Escala usada: probabilidade e impacto em três níveis — **alta / média / baixa**.
