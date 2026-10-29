@@ -117,6 +117,16 @@ git push -u origin historia/ong-aceita-doacao
 Abra o Pull Request no GitHub, preencha o template, espere o **CI ficar verde** e
 peça a revisão de **outro integrante**. Só então faça o merge.
 
+## Definição de pronto
+
+Pronto, no nosso grupo, é:
+
+- [ ] CI verde no PR — onde se confere: aba Checks do PR (check `build-e-testes`)
+- [ ] Aprovado por um integrante que não é o autor — onde se confere: aba Reviews do PR
+- [ ] Cada critério de aceite da fatia tem um `it` com o nome do critério, não `it.todo` — onde se confere: diff do PR em `tests/doacoes.test.js`
+- [ ] Descrição do PR com História / decisão, Como verificar e Uso de IA preenchidos — onde se confere: descrição do PR
+- [ ] SQL só em `src/repositorio.js`, com marcador `?` e sem valor colado na string — onde se confere: diff do PR
+
 ## O que já está pronto e o que falta
 
 **Pronto (até o Trabalho 2):**
