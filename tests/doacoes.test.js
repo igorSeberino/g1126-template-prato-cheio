@@ -458,6 +458,23 @@ describe('a API só aceita os dados no formato certo', () => {
   });
 });
 
+describe('ONG filtra as doações disponíveis por tipo (história #7)', () => {
+  // Critério de aceite — História #7, fatia 1
+  // Dado que existem doações disponíveis de tipos variados (uma Sopa e um Pão)
+  // Quando a ONG pede a lista com ?tipo=Sopa
+  // Então só a doação do tipo Sopa aparece
+  it('mostra só as doações do tipo filtrado', async () => {
+    await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Pão' });
+
+    const res = await request(app).get('/api/doacoes?tipo=Sopa');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].tipo).toBe('Sopa');
+  });
+});
+
 describe('relatório mensal da Marta (história #4)', () => {
   // As coletas dos testes são de setembro a outubro de 2026: "agora" fica depois delas,
   // para o teste não depender do dia em que roda.

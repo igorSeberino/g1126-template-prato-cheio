@@ -81,8 +81,10 @@ export async function criarDoacao(dados = {}) {
 
 // História zero — "uma ONG vê as doações disponíveis".
 // Doação vencida não aparece: a ONG não pode aceitar comida que já passou da validade.
-export async function listarDisponiveis() {
-  const disponiveis = await repo.listarDisponiveis();
+// História #7 (fatia 1) — com `tipo`, só as doações desse tipo; sem tipo, todas.
+export async function listarDisponiveis(tipo) {
+  const filtro = comoTexto(tipo, 'tipo') || undefined;
+  const disponiveis = await repo.listarDisponiveis(filtro);
   return disponiveis.filter((d) => !estaVencida(d.validade));
 }
 
