@@ -515,6 +515,37 @@ describe('ONG filtra as doações disponíveis por tipo (história #7)', () => {
 
     expect(res.body.map((d) => d.tipo)).toEqual(['Sopa', 'Pão']);
   });
+
+  // Limite — História #7, fatia 1 (tipo sem doação)
+  // Dado que só existe uma Sopa disponível
+  // Quando a ONG pede a lista com ?tipo=Feijão
+  // Então a lista volta vazia
+  it('tipo sem nenhuma doação disponível devolve lista vazia', async () => {
+    await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app).get('/api/doacoes?tipo=Feijão');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  // Limite — História #7, fatia 1 (vencida não aparece no filtro)
+  // Dado uma Sopa com validade de hoje e outra com validade longe, e o relógio avança um dia
+  // Quando a ONG pede a lista com ?tipo=Sopa
+  // Então só a Sopa de validade longe aparece
+  it('não mostra doação vencida do tipo filtrado', async () => {
+    congelarRelogio('2026-10-22T15:00:00Z'); // 22/10 ao meio-dia em Brasília
+    const venceHoje = await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, validade: '2026-10-22' });
+    const venceLonge = await request(app).post('/api/doacoes').send(doacaoValida);
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z')); // um dia depois: a de hoje venceu
+
+    const res = await request(app).get('/api/doacoes?tipo=Sopa');
+
+    expect(venceHoje.status).toBe(201);
+    expect(res.body.map((d) => d.id)).toEqual([venceLonge.body.id]);
+  });
 });
 
 describe('relatório mensal da Marta (história #4)', () => {
