@@ -15,10 +15,18 @@ export async function inserir({ tipo, quantidade, validade }) {
 }
 
 // Devolve apenas as doações com status 'disponivel', da mais antiga para a mais recente
-// (ordem de publicação = ordem do id).
-export async function listarDisponiveis() {
+// (ordem de publicação = ordem do id). Com `tipo` (história #7), só as desse tipo: o valor
+// entra pelo marcador `?`, nunca colado na string do SQL.
+export async function listarDisponiveis(tipo) {
+  if (tipo === undefined) {
+    const { rows } = await query(
+      "SELECT * FROM doacoes WHERE status = 'disponivel' ORDER BY id"
+    );
+    return rows;
+  }
   const { rows } = await query(
-    "SELECT * FROM doacoes WHERE status = 'disponivel' ORDER BY id"
+    "SELECT * FROM doacoes WHERE status = 'disponivel' AND tipo = ? ORDER BY id",
+    [tipo]
   );
   return rows;
 }

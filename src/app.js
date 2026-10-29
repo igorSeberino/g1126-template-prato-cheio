@@ -29,7 +29,7 @@ export function criarApp() {
   app.get('/api/saude', (req, res) => res.json({ ok: true }));
 
   app.get('/api/doacoes', rota(async (req, res) => {
-    res.json(await doacoes.listarDisponiveis());
+    res.json(await doacoes.listarDisponiveis(req.query.tipo));
   }));
 
   app.post('/api/doacoes', rota(async (req, res) => {
