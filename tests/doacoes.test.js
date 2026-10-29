@@ -473,6 +473,48 @@ describe('ONG filtra as doações disponíveis por tipo (história #7)', () => {
     expect(res.body).toHaveLength(1);
     expect(res.body[0].tipo).toBe('Sopa');
   });
+
+  // Critério de aceite — História #7, fatia 1 (ordem de publicação)
+  // Dado que foram publicadas, nesta ordem, uma Sopa, um Pão e outra Sopa
+  // Quando a ONG pede a lista com ?tipo=Sopa
+  // Então as duas Sopas aparecem na ordem em que foram publicadas
+  it('mantém a ordem de publicação dentro do tipo filtrado', async () => {
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, quantidade: '1' });
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Pão' });
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, quantidade: '2' });
+
+    const res = await request(app).get('/api/doacoes?tipo=Sopa');
+
+    expect(res.body.map((d) => d.quantidade)).toEqual(['1', '2']);
+  });
+
+  // Critério de aceite — História #7, fatia 1 (doação aceita sai do filtro)
+  // Dado que existem duas Sopas e um Pão, e a primeira Sopa já foi aceita por uma ONG
+  // Quando a ONG pede a lista com ?tipo=Sopa
+  // Então só a segunda Sopa aparece
+  it('não mostra doação do tipo filtrado que já foi aceita', async () => {
+    const primeira = await request(app).post('/api/doacoes').send(doacaoValida);
+    const segunda = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Pão' });
+    await request(app).post(`/api/doacoes/${primeira.body.id}/aceitar`).send({ ong: 'ONG A' });
+
+    const res = await request(app).get('/api/doacoes?tipo=Sopa');
+
+    expect(res.body.map((d) => d.id)).toEqual([segunda.body.id]);
+  });
+
+  // Critério de aceite — História #7, fatia 1 (sem filtro)
+  // Dado que existem uma Sopa e um Pão disponíveis
+  // Quando a ONG pede a lista sem ?tipo=
+  // Então as doações dos dois tipos aparecem, na ordem de publicação
+  it('sem filtro, mostra as doações de todos os tipos', async () => {
+    await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Pão' });
+
+    const res = await request(app).get('/api/doacoes');
+
+    expect(res.body.map((d) => d.tipo)).toEqual(['Sopa', 'Pão']);
+  });
 });
 
 describe('relatório mensal da Marta (história #4)', () => {
