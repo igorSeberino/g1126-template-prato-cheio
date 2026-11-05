@@ -435,6 +435,23 @@ describe('a API só aceita os dados no formato certo', () => {
     expect(coleta.status).toBe(404);
   });
 
+  // Revisão do PR da migração: no PostgreSQL, um id que não é número fazia o banco recusar
+  // a consulta e a API responder 500; no SQLite era 404.
+  // Dado que o id na URL não é um número (ou não cabe num INTEGER do banco)
+  // Quando alguém tenta aceitar, coletar ou cancelar essa doação
+  // Então o sistema responde 404, como para qualquer doação que não existe
+  it('responde 404 para id que não é um número', async () => {
+    const aceite = await request(app).post('/api/doacoes/abc/aceitar').send({ ong: 'ONG A' });
+    const coleta = await request(app).post('/api/doacoes/abc/coletar').send({});
+    const cancelamento = await request(app).post('/api/doacoes/abc/cancelar').send();
+    const grandeDemais = await request(app).post('/api/doacoes/99999999999/cancelar').send();
+
+    expect(aceite.status).toBe(404);
+    expect(coleta.status).toBe(404);
+    expect(cancelamento.status).toBe(404);
+    expect(grandeDemais.status).toBe(404);
+  });
+
   // Dado que acontece um erro inesperado (ex.: o banco falha)
   // Quando a API responde
   // Então devolve 500, sem expor SQL nem detalhe interno ao cliente

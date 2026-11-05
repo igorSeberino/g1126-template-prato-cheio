@@ -31,8 +31,16 @@ export async function listarDisponiveis(tipo) {
   return rows;
 }
 
+// Maior valor de uma coluna INTEGER no PostgreSQL.
+const MAIOR_ID = 2147483647;
+
 // Busca uma doação pelo id (devolve undefined se não existir).
+// Id que não é um inteiro positivo que caiba na coluna (ex.: 'abc' vindo da URL) não existe:
+// devolve undefined sem consultar, porque o PostgreSQL recusaria a consulta e a API
+// responderia 500 onde sempre respondeu 404 (revisão do PR da migração).
 export async function buscarPorId(id) {
+  const texto = String(id);
+  if (!/^\d+$/.test(texto) || Number(texto) > MAIOR_ID) return undefined;
   const { rows } = await query('SELECT * FROM doacoes WHERE id = $1', [id]);
   return rows[0];
 }
