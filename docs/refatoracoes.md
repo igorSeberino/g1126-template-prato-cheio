@@ -17,11 +17,17 @@
   - `vitest.config.js`: os testes usam o banco `pratocheio_teste` (ou `DATABASE_URL_TESTE`).
   - Preparação do teste de proteção: cria um banco temporário no PostgreSQL em vez de um
     arquivo SQLite.
-- **O que NÃO mudou:** `src/doacoes.js`, `src/app.js`, as rotas e as asserções dos testes.
+  - Ajustes da revisão do PR #23: `buscarPorId` (`src/repositorio.js`) devolve `undefined`
+    para id que não é inteiro ou não cabe num INTEGER, e a API voltou a responder 404 como no
+    SQLite; a limitação da tradução `?` → `$n` ficou documentada no `src/db.js`; o ADR 0002
+    ganhou a revisão de 05/11/2026 explicando por que o `criada_em` continua TEXT.
+- **O que NÃO mudou:** `src/doacoes.js`, `src/app.js`, as rotas e as asserções dos testes
+  que já existiam.
 - **Evidência de que o comportamento se manteve:**
   - testes antes da mudança: 36 passando (SQLite, `main` em `6869b1d`)
-  - testes depois da mudança: 36 passando (PostgreSQL 16)
-  - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/42126821110
+  - testes depois da mudança: 37 passando (PostgreSQL 16): os 36 de antes, com as mesmas
+    asserções, mais 1 teste novo da revisão (`responde 404 para id que não é um número`)
+  - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/42130470845
 
 ## Refatoração 2 — Transições de status duplicadas em `src/doacoes.js`
 
