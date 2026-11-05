@@ -38,6 +38,9 @@ export async function bancoEmUso() {
 // Aceita os dois marcadores: `$1, $2…` (dialeto do PostgreSQL, usado no repositorio.js) e
 // `?` (o da Unidade 1, ainda usado na preparação de alguns testes). Se o SQL já tem `$n`,
 // passa direto; senão, cada `?` vira o próximo `$n`.
+// LIMITAÇÃO: a troca não entende aspas — um `?` dentro de um texto no SQL também vira `$n`
+// ('tem pão?' viraria 'tem pão$1'). Por isso o código novo usa sempre `$1, $2…`, e a
+// tradução sai quando a preparação dos testes passar para `$n` (PR à parte, depois deste).
 function paraMarcadoresDoPostgres(sql) {
   if (/\$\d/.test(sql)) return sql;
   let n = 0;
