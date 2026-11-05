@@ -23,12 +23,20 @@
   - testes depois da mudança: 36 passando (PostgreSQL 16)
   - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/42126821110
 
-## Refatoração 2 — (nome)
+## Refatoração 2 — Transições de status duplicadas em `src/doacoes.js`
 
-- **Cheiro de código atacado:** (duplicação, função longa, nome que engana, regra na rota…)
-- **Qual dor concreta isso resolvia:**
-- **O que mudou:**
-- **Evidência (testes verdes antes e depois):**
+- **Cheiro de código atacado:** duplicação. `aceitar`, `marcarColetada` e `cancelar` repetem
+  o mesmo roteiro: busca por id → 404 → confere o status → `UPDATE` atômico → trata a corrida
+  se o `UPDATE` não pegou a linha.
+- **Qual dor concreta isso resolvia:** a próxima transição (ex.: "ONG desiste do aceite")
+  copiaria esse bloco pela quarta vez. Se alguém esquecer o tratamento da corrida, quebra a
+  decisão D1 (duas ONGs com a mesma doação) sem nenhum teste avisar.
+- **O que vai mudar:** extrair uma função que busca a doação ou lança `NaoEncontrada`, e outra
+  que lança `ErroDeRegra` quando o `UPDATE` atômico não pegou a linha. As três regras passam
+  a usá-las.
+- **Evidência (testes verdes antes e depois):** pendente. Refatoração escolhida e registrada
+  em 05/11; será aplicada em PR à parte, depois do merge do PR #23, com a suíte verde antes e
+  depois.
 
 ---
 
