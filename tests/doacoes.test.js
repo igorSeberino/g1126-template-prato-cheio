@@ -661,6 +661,9 @@ describe('proteção do banco real', () => {
       await cliente.end();
     }
   }
+  // Precisa que o usuário do banco tenha permissão CREATEDB (no CI ele é superusuário; na
+  // máquina de cada um, ver o `CREATE USER ... CREATEDB` do README). Sem ela, o teste falha
+  // com "permission denied to create database" ANTES de chegar na trava — não é a trava.
   async function criarBancoDoPiloto(nome) {
     await noBanco(process.env.DATABASE_URL, async (c) => {
       await c.query(`DROP DATABASE IF EXISTS ${nome}`);
