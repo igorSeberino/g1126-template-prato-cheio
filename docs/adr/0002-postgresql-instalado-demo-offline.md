@@ -150,3 +150,28 @@ Nenhuma das alternativas descartadas evitaria o incidente sozinha, e o motivo da
 **Rastreabilidade:** objetivo de impacto 3 de `docs/analise.md` (dados confiáveis de impacto
 para sustentar o financiamento — doações apagadas são impacto perdido) e a restrição da
 vigilância sanitária (rastreabilidade de toda doação publicada, `## Regras de negócio`).
+
+## Revisão — 05/11/2026
+
+**O que mudou.** A migração foi executada (PR #23). Uma consequência listada no ADR 0001 —
+"o `criada_em` deixa de ser texto" — **não** foi seguida, e a revisão do PR pediu que o
+motivo ficasse registrado aqui, e não só na descrição do PR.
+
+**A decisão continua: PostgreSQL 16 instalado em cada notebook, contêiner só no CI.** O que
+muda é um detalhe do schema herdado do ADR 0001:
+
+- **`criada_em` continua `TEXT`, no formato `AAAA-MM-DD HH:MM:SS` (UTC)**, com default
+  `to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')` em `src/db.js`.
+- **Por quê:** `src/doacoes.js` lê esse campo como texto (função `instante`). Com
+  `TIMESTAMP`, o pacote `pg` devolveria um objeto `Date`, e a troca de banco vazaria para as
+  regras de negócio — o oposto do que o ADR 0001 promete ("a troca fica contida em
+  `src/db.js`"). Entre as duas consequências do ADR 0001, vale a que protege o contrato.
+- **Alternativa descartada:** `TIMESTAMP` com um conversor do `pg` devolvendo texto. Deixaria
+  o tipo "certo" no banco, mas o formato do texto passaria a depender do conversor e do fuso
+  da sessão (o PostgreSQL local de cada notebook pode estar em `America/Sao_Paulo`, o do CI em
+  UTC).
+- **Consequência negativa:** comparar e calcular datas no próprio banco continua exigindo
+  conversão. **Quem paga:** quem precisar de consulta por data em SQL; hoje nenhuma consulta
+  do `src/repositorio.js` precisa (as comparações são de texto ISO ou ficam em JavaScript).
+- **Critério de validação:** o mesmo da migração — a suíte inteira verde no PostgreSQL do CI
+  e `src/doacoes.js` fora do diff do PR #23.
