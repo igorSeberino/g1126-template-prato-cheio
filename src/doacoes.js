@@ -88,6 +88,26 @@ export async function listarDisponiveis(tipo) {
   return disponiveis.filter((d) => !estaVencida(d.validade));
 }
 
+// Passos que toda transição de status repete (aceitar, coletar, cancelar).
+// Busca a doação ou lança NaoEncontrada (404).
+async function buscarOuFalhar(id) {
+  const doacao = await repo.buscarPorId(id);
+  if (!doacao) {
+    throw new NaoEncontrada('doação não encontrada');
+  }
+  return doacao;
+}
+
+// O UPDATE atômico devolve a linha atualizada, ou nada se outra requisição mudou o status
+// entre a leitura e a escrita (corrida, decisão D1). Sem esta checagem, a guarda do banco
+// existiria mas a rota responderia sucesso com um valor vazio.
+function exigirTransicao(atualizada, mensagem) {
+  if (!atualizada) {
+    throw new ErroDeRegra(mensagem);
+  }
+  return atualizada;
+}
+
 // História zero — "uma ONG aceita uma doação".
 // Regra do caso: uma doação aceita não fica disponível para outra ONG.
 // Decisão D2 (docs/projeto.md): a ONG se identifica pelo nome, obrigatório no aceite —
@@ -97,22 +117,18 @@ export async function aceitar(id, ong) {
   if (!texto) {
     throw new ErroDeRegra('informe o nome da ONG que está aceitando');
   }
-  const doacao = await repo.buscarPorId(id);
-  if (!doacao) {
-    throw new NaoEncontrada('doação não encontrada');
-  }
+  const doacao = await buscarOuFalhar(id);
   if (doacao.status !== 'disponivel') {
     throw new ErroDeRegra('doação já foi aceita por outra ONG');
   }
   if (estaVencida(doacao.validade)) {
     throw new ErroDeRegra(`doação vencida: a validade era ${doacao.validade}`);
   }
-  const aceita = await repo.aceitar(id, normalizarNomeDaOng(texto));
-  if (!aceita) {
-    // Corrida: outra ONG aceitou entre o buscarPorId e o update.
-    throw new ErroDeRegra('doação já foi aceita por outra ONG');
-  }
-  return aceita;
+  // Corrida: outra ONG pode ter aceitado entre a leitura e o update.
+  return exigirTransicao(
+    await repo.aceitar(id, normalizarNomeDaOng(texto)),
+    'doação já foi aceita por outra ONG'
+  );
 }
 
 // História #3 — "o voluntário confirma a coleta".
@@ -137,10 +153,7 @@ export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
   if (Number.isNaN(Date.parse(horario))) {
     throw new ErroDeRegra('horário da coleta inválido');
   }
-  const doacao = await repo.buscarPorId(id);
-  if (!doacao) {
-    throw new NaoEncontrada('doação não encontrada');
-  }
+  const doacao = await buscarOuFalhar(id);
   if (doacao.status === 'disponivel') {
     throw new ErroDeRegra('doação ainda não foi aceita por uma ONG');
   }
@@ -154,11 +167,10 @@ export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
   if (momento > Date.now() + TOLERANCIA_RELOGIO_MS) {
     throw new ErroDeRegra('o horário da coleta está no futuro; confira o relógio do celular');
   }
-  const coletada = await repo.marcarColetada(id, new Date(momento).toISOString());
-  if (!coletada) {
-    throw new ErroDeRegra('doação já foi coletada');
-  }
-  return coletada;
+  return exigirTransicao(
+    await repo.marcarColetada(id, new Date(momento).toISOString()),
+    'doação já foi coletada'
+  );
 }
 
 // "O doador cancela uma doação disponível" — desiste ou corrige um erro de publicação
@@ -166,19 +178,15 @@ export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
 // (`UPDATE ... WHERE status = 'disponivel'`), para que uma ONG que já aceitou não perca a
 // doação por um cancelamento que chegou depois.
 export async function cancelar(id) {
-  const doacao = await repo.buscarPorId(id);
-  if (!doacao) {
-    throw new NaoEncontrada('doação não encontrada');
-  }
+  const doacao = await buscarOuFalhar(id);
   if (doacao.status !== 'disponivel') {
     throw new ErroDeRegra('só é possível cancelar uma doação ainda disponível');
   }
-  const cancelada = await repo.cancelar(id);
-  if (!cancelada) {
-    // Corrida: a doação foi aceita entre o buscarPorId e o update.
-    throw new ErroDeRegra('só é possível cancelar uma doação ainda disponível');
-  }
-  return cancelada;
+  // Corrida: a doação pode ter sido aceita entre a leitura e o update.
+  return exigirTransicao(
+    await repo.cancelar(id),
+    'só é possível cancelar uma doação ainda disponível'
+  );
 }
 
 // História #4 — "a Marta vê o relatório mensal de doações coletadas".
