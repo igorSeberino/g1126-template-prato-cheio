@@ -37,13 +37,22 @@
 - **Qual dor concreta isso resolvia:** a próxima transição (ex.: "ONG desiste do aceite")
   copiaria esse bloco pela quarta vez. Se alguém esquecer o tratamento da corrida, quebra a
   decisão D1 (duas ONGs com a mesma doação) sem nenhum teste avisar.
-- **O que vai mudar:** extrair uma função que busca a doação ou lança `NaoEncontrada`, e outra
-  que lança `ErroDeRegra` quando o `UPDATE` atômico não pegou a linha. As três regras passam
-  a usá-las.
-- **Evidência (testes verdes antes e depois):** pendente. Refatoração escolhida e registrada
-  em 05/11; será aplicada em PR à parte, depois do merge do PR #23, com a suíte verde antes e
-  depois.
+- **O que mudou:** `src/doacoes.js` ganhou `buscarOuFalhar(id)` (busca a doação ou lança
+  `NaoEncontrada`, 404) e `exigirTransicao(atualizada, mensagem)` (lança `ErroDeRegra` quando
+  o `UPDATE` atômico não pegou a linha). `aceitar`, `marcarColetada` e `cancelar` passaram a
+  usá-las; as mensagens de erro, a ordem das validações e o SQL ficaram iguais. Aplicada
+  em 12/11/2026, no PR #25.
+- **Evidência (testes verdes antes e depois):**
+  - testes antes da mudança: 37 passando (PostgreSQL 16, `main` em `04f0097`)
+  - testes depois da mudança: 37 passando, sem alterar nenhum teste
+  - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/43327868680
 
 ---
 
-**Limitações e o que ficou de fora:** (o que vocês viram e decidiram não refatorar, e por quê)
+**Limitações e o que ficou de fora:**
+
+- `criada_em` continua TEXT no PostgreSQL (`'AAAA-MM-DD HH:MM:SS'`), e `coletada_em` é ISO 8601.
+  A função `instante()` em `src/doacoes.js` ainda converte as duas. Trocar para `TIMESTAMPTZ`
+  mexe no contrato da API e nos testes; ficou de fora (justificativa no ADR 0002).
+- `aceitar`, `marcarColetada` e `cancelar` ainda têm cada uma as suas próprias guardas de
+  status; só o que se repetia (busca, 404 e corrida) foi extraído.
