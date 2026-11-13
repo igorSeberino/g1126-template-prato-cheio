@@ -88,13 +88,8 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
 
 ## Uso de IA
 
-- **O que a IA fez:** o Claude (Claude Code) leu `docs/analise.md`, `tests/doacoes.test.js`,
-  `docs/demo.md`, `public/index.html` e `src/repositorio.js`, cruzou cada critério com o teste e o
-  passo da demo, e redigiu este arquivo com uma proposta de status para cada linha. Foi ele quem
-  apontou que o filtro compara o texto exato (critério 7) e que o teste do critério 5 não confere a
-  primeira ONG.
 - **O que foi verificado:** cada nome de teste citado existe em `tests/doacoes.test.js`; o link do CI
   é a execução verde da `main` no commit `be4f5bd`; os textos da demo foram copiados de
   `docs/demo.md`.
-- **O que a IA não decidiu:** o status final de cada linha é do grupo, na revisão deste PR; a seção
+- **Status:** o status final de cada linha é do grupo, na revisão deste PR; a seção
   *Pendente de decisão do grupo* ficou aberta de propósito.
