@@ -10,7 +10,7 @@ Conecta doadores de alimentos excedentes a ONGs, antes que a comida se perca.
 - Adrian Cesar Gonçalves — @adrian-cesar
 - Diego Nessler — @Diegonessler
 - Gabriel Carvalho — @gabrielcarvallho
-- Igor Thiago seberino — @igorSeberino
+- Igor Thiago Seberino — @igorSeberino
 - Renato Colin Neto — @rcolinneto
 
 ## Contribuições
@@ -50,38 +50,77 @@ O uso de IA em cada parte do trabalho está registrado em `docs/projeto.md` → 
 
 ## Como rodar
 
-Requisito: **Node.js 22.13 ou superior**. Mais nada — o banco da Unidade 1 é SQLite, embutido no próprio Node.
+Requisitos: **Node.js 22.13 ou superior** e **PostgreSQL 16** instalado na máquina
+(decisão do [ADR 0002](docs/adr/0002-postgresql-instalado-demo-offline.md): roda sem internet,
+sem Docker). O PostgreSQL 18 também funciona (testado num clone limpo, Postgres.app no macOS).
 
-> Esta é a **stack preferencial** da disciplina. Se o seu grupo optar por outra, registre o ADR de justificativa e garanta os mesmos compromissos: repositório público com CI verde, rota de saúde, testes por um comando, os três comandos documentados aqui no README e banco relacional migrado para PostgreSQL na Unidade 3.
+### 1. PostgreSQL — uma vez por máquina
+
+Instale o PostgreSQL e deixe o serviço ligado na porta **5432**:
+
+- **Windows / Linux:** instalador oficial em <https://www.postgresql.org/download/>.
+- **macOS:** [Postgres.app](https://postgresapp.com/) (clique em *Start*). Na primeira conexão
+  do Node ele pode perguntar se permite o acesso — clique em **Allow**.
+
+Abra o `psql` como administrador (no Windows/Linux, usuário `postgres`; no Postgres.app,
+dois cliques em qualquer banco da janela) e crie o usuário e os **dois** bancos:
+
+```sql
+CREATE USER pratocheio WITH PASSWORD 'pratocheio' CREATEDB;
+CREATE DATABASE pratocheio       OWNER pratocheio;  -- desenvolvimento e demo
+CREATE DATABASE pratocheio_teste OWNER pratocheio;  -- usado pelo npm test
+```
+
+- O `pratocheio_teste` é obrigatório: sem ele **todos os testes falham** com
+  `database "pratocheio_teste" does not exist`.
+- O `CREATEDB` é obrigatório: o teste "proteção do banco real" cria um banco temporário.
+
+### 2. Projeto
+
+Clone em uma pasta local comum (por exemplo `~/dev/`), **fora** de OneDrive, Google Drive ou iCloud.
 
 ```bash
 npm install       # só na primeira vez
-npm run db:migrar # cria o schema (arquivo dados.sqlite)
+npm run db:migrar # cria a tabela no banco pratocheio; imprime "schema criado"
+npm test          # roda os testes no banco pratocheio_teste (37 testes)
 npm start         # sobe em http://localhost:3000
-npm test          # roda os testes
 npm run dev       # sobe recarregando a cada alteração
 ```
 
-Os testes usam SQLite **em memória**, então não sujam o banco de desenvolvimento.
+### Conexão (`DATABASE_URL`)
 
-> Ao rodar `npm test` o Node imprime `ExperimentalWarning: SQLite is an experimental feature`.
-> É esperado — o módulo embutido `node:sqlite` ainda é marcado como experimental. Não é erro e não reprova o CI.
+Não precisa de `.env`. Sem `DATABASE_URL`, o app usa
+`postgres://pratocheio:pratocheio@localhost:5432/pratocheio` (o mesmo do `.env.example`).
+Para outro servidor, porta ou senha, defina antes de rodar:
 
-> **Atenção:** não deixe o repositório dentro de uma pasta sincronizada (OneDrive, Google Drive, Dropbox) nem em disco de rede. O SQLite precisa de trava de arquivo e nesses lugares falha com `disk I/O error`. Clone em uma pasta local comum, por exemplo `~/dev/`.
+```bash
+export DATABASE_URL=postgres://usuario:senha@host:5432/pratocheio            # npm start / db:migrar
+export DATABASE_URL_TESTE=postgres://usuario:senha@host:5432/pratocheio_teste # npm test
+```
 
-## O banco: SQLite agora, PostgreSQL depois
+Os testes **nunca** usam o banco de desenvolvimento: o `vitest.config.js` aponta para o
+`pratocheio_teste`, e `limparBanco()` se recusa a apagar qualquer banco com outro nome.
+No CI, o GitHub Actions sobe um `postgres:16-alpine` como *service container* (`.github/workflows/ci.yml`).
 
-| Unidade | Banco | O que precisa instalar |
+> Avisos esperados no `npm install` (não impedem nada): `vulnerabilities` nas dependências e,
+> no npm 12+, `install scripts blocked` para `esbuild`/`fsevents`.
+
+> **Stack da disciplina:** repositório público com CI verde, rota de saúde (`/api/saude`),
+> testes por um comando e banco relacional em PostgreSQL na Unidade 3.
+
+## O banco: de SQLite a PostgreSQL
+
+| Unidade | Banco | Registro |
 |---|---|---|
-| 1 — Análise | **SQLite** (`node:sqlite`, embutido) | nada além do Node |
-| 2 — Projeto | SQLite | nada |
-| 3 — Construção | **PostgreSQL** (após refatorar) | um PostgreSQL acessível — o caminho é escolha do grupo |
+| 1 — Análise | SQLite (`node:sqlite`, embutido) | — |
+| 2 — Projeto | SQLite; decisão da troca registrada | [ADR 0001](docs/adr/0001-migracao-sqlite-postgresql.md) (contêiner) → [ADR 0002](docs/adr/0002-postgresql-instalado-demo-offline.md) (instalado) |
+| 3 — Construção | **PostgreSQL 16** (feito, PR #23) | Refatoração 1 em `docs/refatoracoes.md` |
 
-A troca não é acidente de percurso: na Unidade 2 vocês registram a decisão em um **ADR** (alternativas, consequências, riscos) e na Unidade 3 executam a **refatoração** — com os testes existentes provando que o comportamento se manteve.
+Por que **instalado** e não em contêiner: a demo é ao vivo, no notebook de um integrante
+sorteado, sem garantia de internet na sala (ADR 0002). O CI continua com contêiner.
 
-O `src/db.js` foi desenhado para isso: ele expõe `query()` devolvendo `{ rows }`, então a troca do banco fica contida nele e não vaza para as regras de negócio.
-
-**Como o PostgreSQL vai subir é decisão do grupo**, comparada no mesmo ADR: instalar o PostgreSQL na máquina, subir um contêiner, ou usar um serviço gerenciado gratuito (Neon, Supabase, Render). A disciplina não impõe o caminho — exige o banco alcançável por `DATABASE_URL`, o schema migrado e o CI verde. Cada opção tem custo e risco diferentes, e reconhecê-los é parte da decisão.
+A troca ficou contida em `src/db.js`, que expõe `query()` devolvendo `{ rows }`; as regras
+de negócio não mudaram e os mesmos testes provam que o comportamento se manteve.
 
 ## Estrutura
 
@@ -125,7 +164,7 @@ Pronto, no nosso grupo, é:
 - [ ] Aprovado por um integrante que não é o autor — onde se confere: aba Reviews do PR
 - [ ] Cada critério de aceite da fatia tem um `it` com o nome do critério, não `it.todo` — onde se confere: diff do PR em `tests/doacoes.test.js`
 - [ ] Descrição do PR com História / decisão, Como verificar e Uso de IA preenchidos — onde se confere: descrição do PR
-- [ ] SQL só em `src/repositorio.js`, com marcador `?` e sem valor colado na string — onde se confere: diff do PR
+- [ ] SQL só em `src/repositorio.js`, com marcadores `$1, $2…` e sem valor colado na string — onde se confere: diff do PR
 
 ## O que já está pronto e o que falta
 
@@ -142,12 +181,16 @@ Pronto, no nosso grupo, é:
 - Documentos: `docs/analise.md` (Trabalho 1); `docs/projeto.md`, ADRs 0001 e 0002,
   diagramas e evidência da proteção da `main` (Trabalho 2).
 
-**Falta (Unidade 3 / Trabalho 3):**
+**Feito na Unidade 3:**
 
-- Migrar para PostgreSQL conforme o ADR 0002, com a troca contida em `src/db.js`.
+- Migração para PostgreSQL conforme o ADR 0002, com a troca contida em `src/db.js` (PR #23).
+- `docs/refatoracoes.md` (Refatorações 1 e 2) e o roteiro `docs/demo.md`.
+
+**Falta (Trabalho 3):**
+
 - Gravar o horário do aceite no banco (critério 8 de `docs/projeto.md`).
-- `docs/validacao.md`, `docs/refatoracoes.md` e `docs/demo.md`, incluindo o ensaio offline
-  de cada integrante.
+- `docs/validacao.md`, `docs/retrospectivas/3.md` e o "Testado por" do `docs/demo.md`,
+  incluindo o ensaio offline de cada integrante.
 
 ## Uso de IA
 
