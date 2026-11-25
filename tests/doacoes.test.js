@@ -30,8 +30,13 @@ afterAll(async () => {
 });
 
 // Validade bem no futuro: doação vencida não é publicada, e uma data próxima faria os testes
-// quebrarem sozinhos quando ela passasse.
-const doacaoValida = { tipo: 'Sopa', quantidade: '10 porções', validade: '2099-12-31' };
+// quebrarem sozinhos quando ela passasse. O doador é obrigatório desde o H1 (Trabalho 3).
+const doacaoValida = {
+  tipo: 'Sopa',
+  quantidade: '10 porções',
+  validade: '2099-12-31',
+  doador: 'Padaria Pão Bom'
+};
 
 // Congela só o relógio do JavaScript (Date), para testes que dependem de "hoje" ou "agora".
 // O datetime('now') do SQLite continua no relógio real — por isso esses testes gravam o
@@ -713,5 +718,104 @@ describe('proteção do banco real', () => {
       vi.unstubAllEnvs(); // volta para o banco de teste do vitest.config.js
       await apagarBancoDoPiloto(bancoDoPiloto);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Trabalho 3 — H1: o doador acompanha as suas doações (issue #36).
+// O doador se identifica pelo nome digitado na publicação, sem login (limitação registrada
+// em docs/validacao.md). Doações antigas, sem doador, ficam fora da consulta (decisão D6).
+// ---------------------------------------------------------------------------
+
+describe('doador acompanha as suas doações (H1)', () => {
+  const minhasDoacoes = (doador) =>
+    request(app).get('/api/doacoes/do-doador').query({ doador });
+
+  // CA1
+  // Dado que a "Padaria Pão Bom" publicou duas doações e a "Casa Esperança" aceitou uma delas
+  // Quando a padaria consulta as suas doações
+  // Então vê as duas, uma disponível e outra aceita por Casa Esperança
+  it('mostra as doações do doador com a situação de cada uma', async () => {
+    const arroz = await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Arroz' });
+    const leite = await request(app).post('/api/doacoes').send({ ...doacaoValida, tipo: 'Leite' });
+    await request(app)
+      .post(`/api/doacoes/${leite.body.id}/aceitar`)
+      .send({ ong: 'Casa Esperança' });
+
+    const res = await minhasDoacoes('Padaria Pão Bom');
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((d) => d.id)).toEqual([arroz.body.id, leite.body.id]);
+    expect(res.body[0].status).toBe('disponivel');
+    expect(res.body[0].ong).toBeNull();
+    expect(res.body[1].status).toBe('aceita');
+    expect(res.body[1].ong).toBe('Casa Esperança');
+  });
+
+  // CA2
+  // Dado que outro doador publicou uma doação
+  // Quando a padaria consulta as suas doações
+  // Então a doação do outro doador não aparece
+  it('não mostra a doação de outro doador', async () => {
+    const daPadaria = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app)
+      .post('/api/doacoes')
+      .send({ ...doacaoValida, tipo: 'Feijão', doador: 'Restaurante Sabor Caseiro' });
+
+    const res = await minhasDoacoes('Padaria Pão Bom');
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((d) => d.id)).toEqual([daPadaria.body.id]);
+  });
+
+  // CA3
+  // Dado que a doação foi enviada sem o nome do doador
+  // Quando alguém tenta publicar
+  // Então o sistema recusa com uma mensagem clara e nada é gravado
+  it('recusa publicar sem o doador e não grava nada', async () => {
+    const { doador, ...semDoador } = doacaoValida;
+
+    const res = await request(app).post('/api/doacoes').send(semDoador);
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toBe('informe o nome do doador');
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body).toEqual([]);
+  });
+
+  // Caso limite
+  // Dado que o nome do doador veio só com espaços
+  // Quando alguém tenta publicar
+  // Então o sistema recusa como se o doador não tivesse vindo, e nada é gravado
+  it('recusa doador só com espaços', async () => {
+    const res = await request(app).post('/api/doacoes').send({ ...doacaoValida, doador: '   ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toBe('informe o nome do doador');
+    const lista = await request(app).get('/api/doacoes');
+    expect(lista.body).toEqual([]);
+  });
+
+  // Decisão D6
+  // Dado que existe uma doação antiga, gravada antes do H1, sem doador
+  // Quando a padaria consulta as suas doações
+  // Então a doação antiga não aparece para ela (não há como saber de quem era)
+  it('deixa fora da consulta as doações antigas sem doador', async () => {
+    await query("INSERT INTO doacoes (tipo, quantidade, validade) VALUES ('Pão', '5 kg', '2099-12-31')");
+    const daPadaria = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await minhasDoacoes('Padaria Pão Bom');
+
+    expect(res.body.map((d) => d.id)).toEqual([daPadaria.body.id]);
+  });
+
+  // Dado que a consulta chegou sem o nome do doador
+  // Quando o sistema responde
+  // Então recusa com mensagem, em vez de devolver as doações sem doador
+  it('recusa a consulta sem o nome do doador', async () => {
+    const res = await request(app).get('/api/doacoes/do-doador');
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toBe('informe o nome do doador');
   });
 });

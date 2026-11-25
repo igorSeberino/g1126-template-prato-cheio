@@ -6,10 +6,10 @@
 import { query } from './db.js';
 
 // Insere a doação e devolve a linha criada.
-export async function inserir({ tipo, quantidade, validade }) {
+export async function inserir({ tipo, quantidade, validade, doador }) {
   const { rows } = await query(
-    'INSERT INTO doacoes (tipo, quantidade, validade) VALUES ($1, $2, $3) RETURNING *',
-    [tipo, quantidade, validade]
+    'INSERT INTO doacoes (tipo, quantidade, validade, doador) VALUES ($1, $2, $3, $4) RETURNING *',
+    [tipo, quantidade, validade, doador]
   );
   return rows[0];
 }
@@ -28,6 +28,13 @@ export async function listarDisponiveis(tipo) {
     "SELECT * FROM doacoes WHERE status = 'disponivel' AND tipo = $1 ORDER BY id",
     [tipo]
   );
+  return rows;
+}
+
+// H1 — todas as doações de um doador, em qualquer situação, na ordem de publicação.
+// Doações antigas sem doador (NULL) nunca casam com `doador = $1` (decisão D6).
+export async function listarDoDoador(doador) {
+  const { rows } = await query('SELECT * FROM doacoes WHERE doador = $1 ORDER BY id', [doador]);
   return rows;
 }
 

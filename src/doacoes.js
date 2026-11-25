@@ -46,6 +46,7 @@ function comoTexto(valor, nomeDoCampo) {
 }
 
 // Decisão D2: o nome da ONG é declarado à mão. Espaços repetidos ou nas pontas viram um só.
+// H1: o nome do doador também é declarado à mão e passa pela mesma limpeza.
 function normalizarNomeDaOng(nome) {
   return nome.trim().replace(/\s+/g, ' ');
 }
@@ -76,7 +77,18 @@ export async function criarDoacao(dados = {}) {
   if (estaVencida(valores.validade)) {
     throw new ErroDeRegra(`a validade ${valores.validade} já passou`);
   }
-  return repo.inserir(valores);
+  // H1 (Trabalho 3): sem o doador, ele não consegue acompanhar a doação depois.
+  const doador = exigirDoador(dados.doador);
+  return repo.inserir({ ...valores, doador });
+}
+
+// H1: o doador se identifica pelo nome, sem login (limitação em docs/validacao.md).
+function exigirDoador(valor) {
+  const texto = comoTexto(valor, 'doador');
+  if (!texto) {
+    throw new ErroDeRegra('informe o nome do doador');
+  }
+  return normalizarNomeDaOng(texto);
 }
 
 // História zero — "uma ONG vê as doações disponíveis".
@@ -86,6 +98,13 @@ export async function listarDisponiveis(tipo) {
   const filtro = comoTexto(tipo, 'tipo') || undefined;
   const disponiveis = await repo.listarDisponiveis(filtro);
   return disponiveis.filter((d) => !estaVencida(d.validade));
+}
+
+// H1 (Trabalho 3) — "o doador acompanha as suas doações": todas as que ele publicou, com a
+// situação de cada uma (disponível, aceita por qual ONG, coletada ou cancelada). O nome
+// passa pela mesma limpeza da publicação, para "Padaria  Pão Bom " achar "Padaria Pão Bom".
+export async function listarDoDoador(doador) {
+  return repo.listarDoDoador(exigirDoador(doador));
 }
 
 // Passos que toda transição de status repete (aceitar, coletar, cancelar).

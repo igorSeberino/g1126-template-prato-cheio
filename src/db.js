@@ -77,6 +77,9 @@ export async function migrar() {
   // Bancos criados antes da história "voluntário marca a doação como coletada" não têm a
   // coluna: ela é acrescentada sem apagar nada.
   await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS coletada_em TEXT');
+  // H1 (Trabalho 3): quem publicou a doação. A tabela já tem linhas, então a coluna entra
+  // vazia (NULL) nelas, sem apagar nada; elas ficam fora de "Minhas doações" (decisão D6).
+  await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS doador TEXT');
 }
 
 /**

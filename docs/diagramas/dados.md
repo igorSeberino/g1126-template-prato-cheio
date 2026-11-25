@@ -17,6 +17,7 @@ erDiagram
         text ong "nulo até o aceite"
         text criada_em "instante da publicação"
         text coletada_em "instante da coleta (horário do evento)"
+        text doador "nome declarado na publicação (H1); nulo nas antigas (D6)"
     }
 ```
 
@@ -55,3 +56,12 @@ O ADR 0002 substituiu o ADR 0001 só em **onde** o PostgreSQL roda (instalado em
 notebook em vez de contêiner; o CI continua com contêiner). O schema-alvo acima não muda:
 continua PostgreSQL 16, com as mesmas colunas e tipos. As divergências com o `src/db.js`
 estão listadas acima.
+
+## Revisão — 25/11/2026 (H1, decisão D6)
+
+O H1 (Trabalho 3) acrescentou a coluna `doador TEXT` (`ALTER TABLE ... ADD COLUMN IF NOT
+EXISTS` em `migrar()`, no `src/db.js`) e o atributo no diagrama acima. Nova divergência:
+
+4. **`doador`:** a publicação exige o nome do doador, mas a coluna aceita nulo — de propósito,
+   porque as doações gravadas antes do H1 ficam sem doador (decisão D6). Quem garante o
+   doador nas doações novas é o `src/doacoes.js` (`criarDoacao`), não o banco.
