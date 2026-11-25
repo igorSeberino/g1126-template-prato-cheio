@@ -25,6 +25,17 @@ Evidências usadas (outra pessoa confere):
 
 **Resumo:** 5 atendem, 1 parcial, 2 não atendem, 0 não verificáveis.
 
+## Histórias do Trabalho 3
+
+Critérios escritos nos issues do Trabalho 3 (#36 a #39). Mesmo status e mesmas evidências da
+tabela acima; cada dono acrescenta as linhas da sua história.
+
+| História | Critério de aceite | Atende? | Evidência |
+|---|---|:--:|---|
+| **H1** (#36) | **CA1** — Dado que a "Padaria Pão Bom" publicou duas doações e a "Casa Esperança" aceitou uma, quando a padaria consulta as suas doações, então vê as duas: uma disponível e outra aceita por Casa Esperança. | atende | Teste "mostra as doações do doador com a situação de cada uma"; demo, passo 8; CI do PR do H1. |
+| **H1** (#36) | **CA2** — Dado que outro doador publicou uma doação, quando a padaria consulta as suas doações, então essa doação não aparece. | atende | Teste "não mostra a doação de outro doador"; demo, passo 8 (troca de nome); CI do PR do H1. |
+| **H1** (#36) | **CA3** — Dado que a doação foi enviada sem o doador, quando alguém tenta publicar, então o sistema recusa com mensagem e nada é gravado. | atende | Testes "recusa publicar sem o doador e não grava nada" e, no limite, "recusa doador só com espaços"; CI do PR do H1. Fora da demo: a tela sempre envia o campo. |
+
 ## Critérios que não atendem — por quê
 
 **Critério 5 (parcial) — "continua registrada para a primeira ONG".**
@@ -85,6 +96,16 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
   demo, passo 6).
 - **Nenhum critério da Unidade 1 se mostrou impossível.** O critério 5 mostrou que um critério com
   duas consequências ("recusa" **e** "continua com a primeira") precisa de uma asserção para cada.
+
+## Limitações do produto
+
+- **O doador se identifica só pelo nome, sem login (H1).** Qualquer pessoa que digitar
+  "Padaria Pão Bom" no celular vê as doações da padaria (tipo, quantidade, validade e qual ONG
+  aceitou). O nome também precisa ser digitado igual: "Padaria Pao Bom", sem acento, é outro
+  doador. Aceitável no piloto de um bairro, sem dado pessoal na doação; deixa de ser quando
+  houver endereço ou telefone do doador.
+- **Doações antigas não têm doador (decisão D6).** As gravadas antes do H1 não aparecem em
+  "Minhas doações" de ninguém.
 
 ## Uso de IA
 
