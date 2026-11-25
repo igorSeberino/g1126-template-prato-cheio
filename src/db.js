@@ -80,6 +80,8 @@ export async function migrar() {
   // H1 (Trabalho 3): quem publicou a doação. A tabela já tem linhas, então a coluna entra
   // vazia (NULL) nelas, sem apagar nada; elas ficam fora de "Minhas doações" (decisão D6).
   await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS doador TEXT');
+  // H2 (Trabalho 3): quem buscou a doação. Doações coletadas antes da H2 ficam sem nome (NULL).
+  await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS voluntario TEXT');
 }
 
 /**

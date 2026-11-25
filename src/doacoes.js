@@ -166,13 +166,19 @@ function instante(texto) {
 // instável na rua). Sem horário enviado, vale o horário em que a confirmação chegou.
 // O horário precisa caber entre a publicação e agora — senão o relatório da Marta mede
 // tempos negativos ou no futuro.
-export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
+// H2 — decisão D7 (docs/projeto.md): o voluntário se identifica pelo nome, obrigatório na
+// coleta, como a ONG no aceite (D2). Sem ele, não dá para saber quem buscou a comida.
+export async function marcarColetada(id, { coletada_em: coletadaEm, voluntario } = {}) {
   const enviado = comoTexto(coletadaEm, 'coletada_em');
   const horario = enviado || new Date().toISOString();
   if (Number.isNaN(Date.parse(horario))) {
     throw new ErroDeRegra('horário da coleta inválido');
   }
   const doacao = await buscarOuFalhar(id);
+  const nome = comoTexto(voluntario, 'voluntario');
+  if (!nome) {
+    throw new ErroDeRegra('informe o nome do voluntário que está coletando');
+  }
   if (doacao.status === 'disponivel') {
     throw new ErroDeRegra('doação ainda não foi aceita por uma ONG');
   }
@@ -187,7 +193,7 @@ export async function marcarColetada(id, { coletada_em: coletadaEm } = {}) {
     throw new ErroDeRegra('o horário da coleta está no futuro; confira o relógio do celular');
   }
   return exigirTransicao(
-    await repo.marcarColetada(id, new Date(momento).toISOString()),
+    await repo.marcarColetada(id, new Date(momento).toISOString(), normalizarNomeDaOng(nome)),
     'doação já foi coletada'
   );
 }

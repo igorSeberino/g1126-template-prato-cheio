@@ -207,7 +207,7 @@ describe('voluntário marca a doação como coletada', () => {
     const aguardando = await request(app).get('/api/doacoes/aceitas');
     expect(aguardando.body.map((d) => d.id)).toContain(id);
 
-    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({});
+    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({ voluntario: 'João Silva' });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('coletada');
@@ -228,7 +228,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: horarioDoEvento });
+      .send({ coletada_em: horarioDoEvento, voluntario: 'João Silva' });
 
     expect(res.body.coletada_em).toBe(horarioDoEvento);
   });
@@ -256,7 +256,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: '2020-01-01T10:00:00.000Z' });
+      .send({ coletada_em: '2020-01-01T10:00:00.000Z', voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/anterior à publicação/);
@@ -274,7 +274,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: daquiAUmaHora });
+      .send({ coletada_em: daquiAUmaHora, voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/futuro/);
@@ -575,7 +575,7 @@ describe('relatório mensal da Marta (história #4)', () => {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
     await query('UPDATE doacoes SET criada_em = ? WHERE id = ?', [criadaEm, body.id]);
     await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong });
-    await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ coletada_em: coletadaEm });
+    await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ coletada_em: coletadaEm, voluntario: 'João Silva' });
     return body.id;
   }
 
