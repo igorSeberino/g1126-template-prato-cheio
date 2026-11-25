@@ -240,7 +240,7 @@ describe('voluntário marca a doação como coletada', () => {
   it('recusa marcar como coletada uma doação que ainda não foi aceita', async () => {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
 
-    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({});
+    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     const lista = await request(app).get('/api/doacoes');

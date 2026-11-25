@@ -67,8 +67,11 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    Resultado: aparece *Doação aceita: Arroz. Ela foi para "Aguardando coleta".*; o Arroz sai
    de "Doações disponíveis" (fica só o Leite) e aparece em "Aguardando coleta" como
    *Arroz — 10 kg (aceita por Casa Esperança)*.
-5. **Voluntário confirma a coleta.** Ação: tocar **Coletada** na linha do Arroz.
-   Resultado: o Arroz some de "Aguardando coleta". Para conferir o efeito: escolher o mês
+5. **Voluntário confirma a coleta (H2).** Ação: em "Aguardando coleta", no campo "Seu nome"
+   digitar `João Silva` e tocar **Coletada** na linha do Arroz.
+   Resultado: aparece *Coleta registrada: Arroz.* e o Arroz some de "Aguardando coleta".
+   Em "Minhas doações", o Arroz passa de *aceita por Casa Esperança* para
+   *coletada por João Silva (aceita por Casa Esperança)*. Para conferir o efeito: escolher o mês
    atual (`11/2026`) em "Mês" e tocar **Ver relatório** → *1 doação coletada (Casa Esperança: 1)*.
 6. **Caso de erro: aceitar sem dizer quem é a ONG.** Ação: apagar o texto de "Sua ONG" e
    tocar **Aceitar** na linha do Leite.
@@ -80,10 +83,15 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
 8. **Doador acompanha as suas doações (H1; pode ser mostrado logo depois do passo 5).**
    Ação: olhar "Minhas doações" (o nome `Padaria Pão Bom` continua em "Seu nome (doador)",
    guardado no navegador). Para conferir que o nome ficou guardado, recarregar a página (F5).
-   Resultado: aparecem *Arroz — 10 kg (até 2026-11-30): coletada (aceita por Casa Esperança)*
+   Resultado: aparecem *Arroz — 10 kg (até 2026-11-30): coletada por João Silva (aceita por Casa Esperança)*
    e *Leite — 12 L (até 2026-11-25): disponível*. Trocando o nome para `Restaurante Sabor
    Caseiro` (e saindo do campo), a lista mostra *Nenhuma doação publicada por Restaurante
    Sabor Caseiro.*
+9. **Caso de erro: coletar sem dizer quem é o voluntário (H2, opcional, 20 s).** Ação: aceitar
+   o Leite como no passo 4, apagar o texto de "Seu nome" em "Aguardando coleta" e tocar
+   **Coletada** na linha do Leite.
+   Resultado: aparece *Informe o seu nome antes de confirmar a coleta.* e o Leite continua em
+   "Aguardando coleta".
 
 ## O que falta, dito na demo
 
