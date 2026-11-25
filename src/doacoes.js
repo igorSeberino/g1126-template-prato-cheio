@@ -46,6 +46,7 @@ function comoTexto(valor, nomeDoCampo) {
 }
 
 // Decisão D2: o nome da ONG é declarado à mão. Espaços repetidos ou nas pontas viram um só.
+// H1: o nome do doador também é declarado à mão e passa pela mesma limpeza.
 function normalizarNomeDaOng(nome) {
   return nome.trim().replace(/\s+/g, ' ');
 }
@@ -76,7 +77,18 @@ export async function criarDoacao(dados = {}) {
   if (estaVencida(valores.validade)) {
     throw new ErroDeRegra(`a validade ${valores.validade} já passou`);
   }
-  return repo.inserir(valores);
+  // H1 (Trabalho 3): sem o doador, ele não consegue acompanhar a doação depois.
+  const doador = exigirDoador(dados.doador);
+  return repo.inserir({ ...valores, doador });
+}
+
+// H1: o doador se identifica pelo nome, sem login (limitação em docs/validacao.md).
+function exigirDoador(valor) {
+  const texto = comoTexto(valor, 'doador');
+  if (!texto) {
+    throw new ErroDeRegra('informe o nome do doador');
+  }
+  return normalizarNomeDaOng(texto);
 }
 
 // História zero — "uma ONG vê as doações disponíveis".

@@ -6,10 +6,10 @@
 import { query } from './db.js';
 
 // Insere a doação e devolve a linha criada.
-export async function inserir({ tipo, quantidade, validade }) {
+export async function inserir({ tipo, quantidade, validade, doador }) {
   const { rows } = await query(
-    'INSERT INTO doacoes (tipo, quantidade, validade) VALUES ($1, $2, $3) RETURNING *',
-    [tipo, quantidade, validade]
+    'INSERT INTO doacoes (tipo, quantidade, validade, doador) VALUES ($1, $2, $3, $4) RETURNING *',
+    [tipo, quantidade, validade, doador]
   );
   return rows[0];
 }
