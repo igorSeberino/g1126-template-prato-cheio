@@ -25,6 +25,8 @@
 
   <fieldset>
     <legend>Publicar doação</legend>
+    <label for="doador">Seu nome (doador)</label>
+    <input id="doador" placeholder="Ex.: Padaria Pão Bom" autocomplete="organization">
     <label for="tipo">Tipo de alimento</label>
     <input id="tipo" placeholder="Ex.: sopa, pão, frutas">
     <label for="quantidade">Quantidade</label>
@@ -34,6 +36,10 @@
     <button id="publicar">Publicar</button>
     <p id="avisoPublicar" class="aviso" role="status" aria-live="polite"></p>
   </fieldset>
+
+  <h2>Minhas doações</h2>
+  <p id="avisoMinhas" class="aviso" role="status" aria-live="polite"></p>
+  <ul id="minhas"></ul>
 
   <h2>Doações disponíveis</h2>
   <label for="ong">Sua ONG (obrigatório para aceitar)</label>
@@ -83,6 +89,55 @@
       return res.json();
     }
 
+    // H1: o doador se identifica pelo nome, sem login. O nome fica guardado no navegador
+    // para não ser digitado de novo a cada doação (e para "Minhas doações" já abrir cheia).
+    const CHAVE_DOADOR = 'pratocheio.doador';
+    const campoDoador = document.getElementById('doador');
+    campoDoador.value = localStorage.getItem(CHAVE_DOADOR) || '';
+
+    function situacao(d) {
+      if (d.status === 'disponivel') return 'disponível';
+      if (d.status === 'aceita') return `aceita por ${d.ong}`;
+      if (d.status === 'coletada') return `coletada (aceita por ${d.ong})`;
+      if (d.status === 'cancelada') return 'cancelada';
+      return d.status;
+    }
+
+    async function carregarMinhas() {
+      const lista = document.getElementById('minhas');
+      const doador = campoDoador.value.trim();
+      if (!doador) {
+        lista.replaceChildren();
+        avisar('avisoMinhas', 'Digite o seu nome em "Publicar doação" para ver as doações que você publicou.', 'espera');
+        return;
+      }
+      let doacoes;
+      try {
+        doacoes = await buscar(`/api/doacoes/do-doador?doador=${encodeURIComponent(doador)}`);
+      } catch {
+        avisar('avisoMinhas', 'Sem conexão: não deu para atualizar as suas doações.');
+        return;
+      }
+      avisar('avisoMinhas', '', 'ok');
+      lista.replaceChildren();
+      if (!doacoes.length) {
+        const li = document.createElement('li');
+        li.textContent = `Nenhuma doação publicada por ${doador}.`;
+        lista.appendChild(li);
+      }
+      for (const d of doacoes) {
+        const li = document.createElement('li');
+        li.textContent = `${d.tipo} — ${d.quantidade} (até ${d.validade}): ${situacao(d)}`;
+        lista.appendChild(li);
+      }
+    }
+
+    // Trocou o nome: guarda e mostra as doações desse nome.
+    campoDoador.onchange = () => {
+      localStorage.setItem(CHAVE_DOADOR, campoDoador.value.trim());
+      carregarMinhas();
+    };
+
     // O seletor de data não oferece dia que já passou (o servidor também recusa).
     document.getElementById('validade').min = new Date().toLocaleDateString('en-CA');
 
@@ -108,6 +163,7 @@
         lista.appendChild(li);
       }
       carregarAceitas();
+      carregarMinhas();
     }
 
     async function aceitar(d, botao) {
@@ -204,11 +260,15 @@
       botao.textContent = 'Publicando…';
       try {
         const r = await enviar('/api/doacoes', {
+          doador: campoDoador.value,
           tipo: campos[0].value,
           quantidade: campos[1].value,
           validade: campos[2].value
         });
         if (r.ok) {
+          // O nome só é guardado depois que o servidor aceitou a publicação.
+          localStorage.setItem(CHAVE_DOADOR, r.corpo.doador);
+          campoDoador.value = r.corpo.doador;
           avisar('avisoPublicar', `Doação publicada: ${r.corpo.tipo}.`, 'ok');
           for (const campo of campos) campo.value = '';
           carregar();
