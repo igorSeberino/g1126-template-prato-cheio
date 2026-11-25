@@ -48,6 +48,17 @@ passaram pela proteção da `main` (aprovação + CI verde).
 
 O uso de IA em cada parte do trabalho está registrado em `docs/projeto.md` → `## Uso de IA`.
 
+### Trabalho 3 — dono e revisor por história
+
+| História | Issue | Dono | Revisor |
+|---|---|---|---|
+| Base: estados da doação (D5) | #35 | Renato | Gabriel |
+| H1 · O doador acompanha as suas doações | #36 | Igor | Diego |
+| H2 · O voluntário confirma a coleta | #37 | Diego | Adrian |
+| H3 · A ONG devolve uma doação aceita + Refatoração 2 | #38 | Gabriel | Renato |
+| H4 · A Marta vê o resultado do mês | #39 | Gabriel | Diego |
+| Fechamento: validação, demo, retrospectiva, `entrega-3` | #40 | Adrian | Igor |
+
 ## Como rodar
 
 Requisitos: **Node.js 22.13 ou superior** e **PostgreSQL 16** instalado na máquina
