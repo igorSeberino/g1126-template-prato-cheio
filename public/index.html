@@ -48,6 +48,8 @@
   <ul id="lista"></ul>
 
   <h2>Aguardando coleta</h2>
+  <label for="voluntario">Seu nome (voluntário)</label>
+  <input id="voluntario" placeholder="Ex.: Rui" autocomplete="given-name">
   <p id="avisoColeta" class="aviso" role="status" aria-live="polite"></p>
   <ul id="aceitas"></ul>
 
@@ -98,7 +100,11 @@
     function situacao(d) {
       if (d.status === 'disponivel') return 'disponível';
       if (d.status === 'aceita') return `aceita por ${d.ong}`;
-      if (d.status === 'coletada') return `coletada (aceita por ${d.ong})`;
+      if (d.status === 'coletada') {
+        return d.voluntario
+          ? `coletada por ${d.voluntario} (aceita por ${d.ong})`
+          : `coletada (aceita por ${d.ong})`;
+      }
       if (d.status === 'cancelada') return 'cancelada';
       return d.status;
     }
@@ -189,6 +195,14 @@
     // Voluntário: confirma a coleta em um toque. O horário enviado é o do primeiro toque
     // (o evento), mesmo que, sem sinal na rua, o envio só dê certo minutos depois.
     const horarioDaColeta = {}; // id da doação -> horário do primeiro toque
+    const voluntarioDaColeta = {}; // id da doação -> nome de quem confirmou (H2, decisão D7)
+    // H2: o voluntário confirma várias coletas seguidas, então o nome fica guardado no celular.
+    const CHAVE_VOLUNTARIO = 'pratocheio.voluntario';
+    const campoVoluntario = document.getElementById('voluntario');
+    campoVoluntario.value = localStorage.getItem(CHAVE_VOLUNTARIO) || '';
+    campoVoluntario.onchange = () => {
+      localStorage.setItem(CHAVE_VOLUNTARIO, campoVoluntario.value.trim());
+    };
     const enviando = new Set(); // ids com envio em andamento
     const ESPERAS_S = [2, 5, 10, 20, 40]; // novas tentativas sem conexão (~1 min no total)
 
@@ -211,6 +225,14 @@
         botao.disabled = enviando.has(d.id);
         botao.textContent = enviando.has(d.id) ? 'Enviando…' : 'Coletada';
         botao.onclick = () => {
+          const voluntario = campoVoluntario.value.trim();
+          if (!voluntario) {
+            avisar('avisoColeta', 'Informe o seu nome antes de confirmar a coleta.');
+            campoVoluntario.focus();
+            return;
+          }
+          localStorage.setItem(CHAVE_VOLUNTARIO, voluntario);
+          voluntarioDaColeta[d.id] ??= voluntario;
           horarioDaColeta[d.id] ??= new Date().toISOString();
           enviando.add(d.id);
           botao.disabled = true;
@@ -225,11 +247,15 @@
     async function enviarColeta(d, tentativa) {
       const horario = horarioDaColeta[d.id];
       try {
-        const r = await enviar(`/api/doacoes/${d.id}/coletar`, { coletada_em: horario });
+        const r = await enviar(`/api/doacoes/${d.id}/coletar`, {
+          coletada_em: horario,
+          voluntario: voluntarioDaColeta[d.id]
+        });
         if (r.status < 500) {
           // Respondeu (com sucesso ou recusa): não adianta tentar de novo.
           enviando.delete(d.id);
           delete horarioDaColeta[d.id];
+          delete voluntarioDaColeta[d.id];
           if (r.ok) avisar('avisoColeta', `Coleta registrada: ${d.tipo}.`, 'ok');
           else avisar('avisoColeta', r.corpo.erro || 'Não foi possível registrar a coleta.');
           carregar();

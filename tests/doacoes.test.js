@@ -207,7 +207,7 @@ describe('voluntário marca a doação como coletada', () => {
     const aguardando = await request(app).get('/api/doacoes/aceitas');
     expect(aguardando.body.map((d) => d.id)).toContain(id);
 
-    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({});
+    const res = await request(app).post(`/api/doacoes/${id}/coletar`).send({ voluntario: 'João Silva' });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('coletada');
@@ -228,7 +228,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: horarioDoEvento });
+      .send({ coletada_em: horarioDoEvento, voluntario: 'João Silva' });
 
     expect(res.body.coletada_em).toBe(horarioDoEvento);
   });
@@ -240,7 +240,7 @@ describe('voluntário marca a doação como coletada', () => {
   it('recusa marcar como coletada uma doação que ainda não foi aceita', async () => {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
 
-    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({});
+    const res = await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     const lista = await request(app).get('/api/doacoes');
@@ -256,7 +256,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: '2020-01-01T10:00:00.000Z' });
+      .send({ coletada_em: '2020-01-01T10:00:00.000Z', voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/anterior à publicação/);
@@ -274,7 +274,7 @@ describe('voluntário marca a doação como coletada', () => {
 
     const res = await request(app)
       .post(`/api/doacoes/${id}/coletar`)
-      .send({ coletada_em: daquiAUmaHora });
+      .send({ coletada_em: daquiAUmaHora, voluntario: 'João Silva' });
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toMatch(/futuro/);
@@ -575,7 +575,7 @@ describe('relatório mensal da Marta (história #4)', () => {
     const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
     await query('UPDATE doacoes SET criada_em = ? WHERE id = ?', [criadaEm, body.id]);
     await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong });
-    await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ coletada_em: coletadaEm });
+    await request(app).post(`/api/doacoes/${body.id}/coletar`).send({ coletada_em: coletadaEm, voluntario: 'João Silva' });
     return body.id;
   }
 
@@ -817,5 +817,99 @@ describe('doador acompanha as suas doações (H1)', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.erro).toBe('informe o nome do doador');
+  });
+});
+describe('o voluntário confirma a coleta (H2)', () => {
+  const minhasDoacoes = (doador) =>
+    request(app).get('/api/doacoes/do-doador').query({ doador });
+
+  async function publicarEAceitar() {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'Casa Esperança' });
+    return body.id;
+  }
+
+  // CA1
+  // Dado que uma doação foi aceita pela Casa Esperança
+  // Quando o voluntário Rui confirma a coleta, digitando o nome completo
+  // Então ficam gravados só o primeiro nome dele (D7), o horário da coleta e o status "coletada"
+  it('grava o primeiro nome do voluntário, o horário e o status coletada', async () => {
+    const id = await publicarEAceitar();
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ voluntario: '  Rui   Barbosa ' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('coletada');
+    expect(res.body.voluntario).toBe('Rui');
+    expect(Date.parse(res.body.coletada_em)).not.toBeNaN();
+  });
+
+  // CA2
+  // Dado que a doação ainda está disponível (nenhuma ONG aceitou)
+  // Quando alguém tenta confirmar a coleta
+  // Então o sistema recusa e a doação não muda: sem voluntário, sem horário, ainda disponível
+  it('recusa coletar uma doação disponível e não muda nada', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+
+    const res = await request(app)
+      .post(`/api/doacoes/${body.id}/coletar`)
+      .send({ voluntario: 'Rui' });
+
+    expect(res.status).toBe(400);
+    const [doacao] = (await minhasDoacoes('Padaria Pão Bom')).body;
+    expect(doacao.status).toBe('disponivel');
+    expect(doacao.voluntario).toBeNull();
+    expect(doacao.coletada_em).toBeNull();
+  });
+
+  // Caso limite — decisão D7 (nome do voluntário obrigatório)
+  // Dado que uma doação foi aceita
+  // Quando a confirmação chega sem o nome do voluntário, ou só com espaços
+  // Então o sistema recusa com uma mensagem clara e a doação continua aceita
+  it('recusa a coleta sem o nome do voluntário e a doação continua aceita', async () => {
+    const id = await publicarEAceitar();
+
+    for (const corpo of [{}, { voluntario: '   ' }]) {
+      const res = await request(app).post(`/api/doacoes/${id}/coletar`).send(corpo);
+      expect(res.status).toBe(400);
+      expect(res.body.erro).toBe('informe o nome do voluntário');
+    }
+    const aguardando = await request(app).get('/api/doacoes/aceitas');
+    expect(aguardando.body.map((d) => d.id)).toContain(id);
+  });
+
+  // Decisão D5 (coletada é estado final)
+  // Dado que a doação já foi coletada pelo Rui
+  // Quando chega uma segunda confirmação, de outro voluntário
+  // Então o sistema recusa e o nome gravado continua sendo o do Rui
+  it('recusa confirmar duas vezes e mantém o primeiro voluntário', async () => {
+    const id = await publicarEAceitar();
+    await request(app).post(`/api/doacoes/${id}/coletar`).send({ voluntario: 'Rui' });
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/coletar`)
+      .send({ voluntario: 'Maria' });
+
+    expect(res.status).toBe(400);
+    const [doacao] = (await minhasDoacoes('Padaria Pão Bom')).body;
+    expect(doacao.voluntario).toBe('Rui');
+  });
+
+  // CA3
+  // Dado que a doação da Padaria Pão Bom foi coletada
+  // Quando a padaria consulta "Minhas doações" (H1)
+  // Então a doação aparece como coletada, com o voluntário
+  it('a doação coletada aparece como coletada em Minhas doações', async () => {
+    const id = await publicarEAceitar();
+    await request(app).post(`/api/doacoes/${id}/coletar`).send({ voluntario: 'Rui' });
+
+    const res = await minhasDoacoes('Padaria Pão Bom');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].id).toBe(id);
+    expect(res.body[0].status).toBe('coletada');
+    expect(res.body[0].voluntario).toBe('Rui');
   });
 });

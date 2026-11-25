@@ -35,6 +35,9 @@ tabela acima; cada dono acrescenta as linhas da sua história.
 | **H1** (#36) | **CA1** — Dado que a "Padaria Pão Bom" publicou duas doações e a "Casa Esperança" aceitou uma, quando a padaria consulta as suas doações, então vê as duas: uma disponível e outra aceita por Casa Esperança. | atende | Teste "mostra as doações do doador com a situação de cada uma"; demo, passo 8; CI do PR do H1. |
 | **H1** (#36) | **CA2** — Dado que outro doador publicou uma doação, quando a padaria consulta as suas doações, então essa doação não aparece. | atende | Teste "não mostra a doação de outro doador"; demo, passo 8 (troca de nome); CI do PR do H1. |
 | **H1** (#36) | **CA3** — Dado que a doação foi enviada sem o doador, quando alguém tenta publicar, então o sistema recusa com mensagem e nada é gravado. | atende | Testes "recusa publicar sem o doador e não grava nada" e, no limite, "recusa doador só com espaços"; CI do PR do H1. Fora da demo: a tela sempre envia o campo. |
+| **H2** (#37) | **CA1** — Dado que uma doação foi aceita, quando o voluntário confirma a coleta, então ficam gravados o nome dele, o horário e o status `coletada`. | atende | Teste "grava o primeiro nome do voluntário, o horário e o status coletada"; demo, passo 5; CI do PR da H2. |
+| **H2** (#37) | **CA2** — Dado que a doação ainda está disponível, quando alguém tenta confirmar a coleta, então o sistema recusa e nada muda. | atende | Testes "recusa coletar uma doação disponível e não muda nada" e "recusa marcar como coletada uma doação que ainda não foi aceita"; inversão de regra no PR da H2 (2 testes falham); CI do PR da H2. Fora da demo: a tela só mostra o botão em "Aguardando coleta". |
+| **H2** (#37) | **CA3** — Dado que a doação foi coletada, quando o doador consulta "Minhas doações", então ela aparece como coletada. | atende | Teste "a doação coletada aparece como coletada em Minhas doações"; demo, passos 5 e 8; CI do PR da H2. |
 
 ## Critérios que não atendem — por quê
 
@@ -106,6 +109,9 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
   houver endereço ou telefone do doador.
 - **Doações antigas não têm doador (decisão D6).** As gravadas antes do H1 não aparecem em
   "Minhas doações" de ninguém.
+- **O voluntário também se identifica só pelo nome, sem login (H2, decisão D7).** O sistema
+  confia no nome digitado; não há como conferir que quem tocou em **Coletada** é mesmo quem
+  buscou a comida. As coletas feitas antes da H2 aparecem sem o nome do voluntário.
 
 ## Uso de IA
 

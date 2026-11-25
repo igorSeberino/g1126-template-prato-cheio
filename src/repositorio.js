@@ -75,10 +75,10 @@ export async function listarAceitas() {
 // O `AND status = 'aceita'` impede, no próprio banco, coletar uma doação que ainda não foi
 // aceita ou que já foi coletada. O horário vem como parâmetro (o do evento, no celular do
 // voluntário) — nada de função de data do banco aqui, para a migração ficar só no db.js.
-export async function marcarColetada(id, coletadaEm) {
+export async function marcarColetada(id, coletadaEm, voluntario) {
   const { rows } = await query(
-    "UPDATE doacoes SET status = 'coletada', coletada_em = $1 WHERE id = $2 AND status = 'aceita' RETURNING *",
-    [coletadaEm, id]
+    "UPDATE doacoes SET status = 'coletada', coletada_em = $1, voluntario = $2 WHERE id = $3 AND status = 'aceita' RETURNING *",
+    [coletadaEm, voluntario, id]
   );
   return rows[0];
 }
