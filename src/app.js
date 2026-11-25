@@ -45,6 +45,11 @@ export function criarApp() {
     res.json(await doacoes.cancelar(req.params.id));
   }));
 
+  // H1 — o doador vê as doações que publicou. Ex.: /api/doacoes/do-doador?doador=Padaria
+  app.get('/api/doacoes/do-doador', rota(async (req, res) => {
+    res.json(await doacoes.listarDoDoador(req.query.doador));
+  }));
+
   // História #3 — o voluntário vê o que precisa buscar e confirma a coleta.
   app.get('/api/doacoes/aceitas', rota(async (req, res) => {
     res.json(await doacoes.listarAceitas());

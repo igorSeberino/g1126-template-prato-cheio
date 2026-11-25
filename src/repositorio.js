@@ -31,6 +31,13 @@ export async function listarDisponiveis(tipo) {
   return rows;
 }
 
+// H1 — todas as doações de um doador, em qualquer situação, na ordem de publicação.
+// Doações antigas sem doador (NULL) nunca casam com `doador = $1` (decisão D6).
+export async function listarDoDoador(doador) {
+  const { rows } = await query('SELECT * FROM doacoes WHERE doador = $1 ORDER BY id', [doador]);
+  return rows;
+}
+
 // Maior valor de uma coluna INTEGER no PostgreSQL.
 const MAIOR_ID = 2147483647;
 

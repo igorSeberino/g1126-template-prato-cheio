@@ -100,6 +100,13 @@ export async function listarDisponiveis(tipo) {
   return disponiveis.filter((d) => !estaVencida(d.validade));
 }
 
+// H1 (Trabalho 3) — "o doador acompanha as suas doações": todas as que ele publicou, com a
+// situação de cada uma (disponível, aceita por qual ONG, coletada ou cancelada). O nome
+// passa pela mesma limpeza da publicação, para "Padaria  Pão Bom " achar "Padaria Pão Bom".
+export async function listarDoDoador(doador) {
+  return repo.listarDoDoador(exigirDoador(doador));
+}
+
 // Passos que toda transição de status repete (aceitar, coletar, cancelar).
 // Busca a doação ou lança NaoEncontrada (404).
 async function buscarOuFalhar(id) {
