@@ -914,6 +914,128 @@ describe('o voluntário confirma a coleta (H2)', () => {
   });
 });
 
+describe('ONG devolve uma doação aceita (H3)', () => {
+  const devolver = (id, corpo) => request(app).post(`/api/doacoes/${id}/devolver`).send(corpo);
+  const disponiveis = () => request(app).get('/api/doacoes');
+  const minhasDoacoes = (doador) =>
+    request(app).get('/api/doacoes/do-doador').query({ doador });
+
+  async function publicarEAceitar(ong = 'Casa Esperança') {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong });
+    return body.id;
+  }
+
+  // CA1
+  // Dado que a Casa Esperança aceitou uma doação
+  // Quando ela devolve com o motivo "sem voluntário hoje"
+  // Então a doação volta a disponível, sem ONG, e o motivo fica registrado
+  it('devolve a doação: volta a disponível, sem ONG, com o motivo registrado', async () => {
+    const id = await publicarEAceitar();
+
+    const res = await devolver(id, { ong: 'Casa Esperança', motivo: 'sem voluntário hoje' });
+
+    expect(res.status).toBe(200);
+    const lista = (await disponiveis()).body;
+    expect(lista.map((d) => d.id)).toContain(id);
+    const doacao = lista.find((d) => d.id === id);
+    expect(doacao.status).toBe('disponivel');
+    expect(doacao.ong).toBeNull();
+    expect(doacao.motivo_devolucao).toBe('sem voluntário hoje');
+  });
+
+  // CA2
+  // Dado que a doação já foi coletada
+  // Quando a Casa Esperança tenta devolvê-la
+  // Então o sistema recusa com mensagem e a doação continua coletada (D5: estado final)
+  it('recusa devolver uma doação coletada e ela continua coletada', async () => {
+    const id = await publicarEAceitar();
+    await request(app).post(`/api/doacoes/${id}/coletar`).send({ voluntario: 'Rui' });
+
+    const res = await devolver(id, { ong: 'Casa Esperança', motivo: 'sem voluntário hoje' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/aceita/);
+    const [doacao] = (await minhasDoacoes('Padaria Pão Bom')).body;
+    expect(doacao.status).toBe('coletada');
+    expect(doacao.ong).toBe('Casa Esperança');
+  });
+
+  // CA3
+  // Dado que a Casa Esperança aceitou a doação
+  // Quando a ONG Bairro Alegre tenta devolvê-la
+  // Então o sistema recusa e a doação continua aceita pela Casa Esperança
+  it('recusa a devolução por outra ONG e a doação continua com quem aceitou', async () => {
+    const id = await publicarEAceitar();
+
+    const res = await devolver(id, { ong: 'ONG Bairro Alegre', motivo: 'sem voluntário hoje' });
+
+    expect(res.status).toBe(400);
+    const [doacao] = (await minhasDoacoes('Padaria Pão Bom')).body;
+    expect(doacao.status).toBe('aceita');
+    expect(doacao.ong).toBe('Casa Esperança');
+    expect(doacao.motivo_devolucao).toBeNull();
+  });
+
+  // Caso limite — decisão D8 (motivo obrigatório)
+  // Dado que a Casa Esperança aceitou a doação
+  // Quando a devolução chega sem motivo, ou só com espaços
+  // Então o sistema recusa com mensagem clara e a doação continua aceita
+  it('recusa devolver sem motivo e a doação continua aceita', async () => {
+    const id = await publicarEAceitar();
+
+    for (const corpo of [{ ong: 'Casa Esperança' }, { ong: 'Casa Esperança', motivo: '   ' }]) {
+      const res = await devolver(id, corpo);
+      expect(res.status).toBe(400);
+      expect(res.body.erro).toBe('informe o motivo da devolução');
+    }
+    const aguardando = (await request(app).get('/api/doacoes/aceitas')).body;
+    expect(aguardando.find((d) => d.id === id).ong).toBe('Casa Esperança');
+  });
+
+  // Caso limite — D8 (quem devolve se identifica, como no aceite, D2)
+  // Dado que a Casa Esperança aceitou a doação
+  // Quando a devolução chega sem o nome da ONG
+  // Então o sistema recusa e a doação continua aceita
+  it('recusa devolver sem o nome da ONG', async () => {
+    const id = await publicarEAceitar();
+
+    const res = await devolver(id, { motivo: 'sem voluntário hoje' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toBe('informe o nome da ONG que está devolvendo');
+  });
+
+  // Caso limite — D5 (transições permitidas)
+  // Dado que existe uma doação disponível e outra que nunca existiu
+  // Quando alguém tenta devolver cada uma
+  // Então a disponível dá 400 (não há o que devolver) e a inexistente dá 404
+  it('devolver uma doação disponível dá 400 e uma inexistente dá 404', async () => {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    const corpo = { ong: 'Casa Esperança', motivo: 'sem voluntário hoje' };
+
+    expect((await devolver(body.id, corpo)).status).toBe(400);
+    expect((await devolver(999999, corpo)).status).toBe(404);
+  });
+
+  // Caso limite — D8 (a mesma ONG pode aceitar de novo; a doação volta inteira)
+  // Dado que a Casa Esperança devolveu a doação
+  // Quando a ONG Bairro Alegre a aceita e a Casa Esperança é escrita em outra grafia
+  // Então o aceite vale, e a devolução aceita "casa esperanca" como a mesma ONG que aceitou
+  it('outra ONG aceita a doação devolvida, e a grafia do nome da ONG não importa', async () => {
+    const id = await publicarEAceitar();
+    expect((await devolver(id, { ong: ' casa  esperanca ', motivo: 'sem voluntário hoje' })).status)
+      .toBe(200);
+
+    const res = await request(app)
+      .post(`/api/doacoes/${id}/aceitar`)
+      .send({ ong: 'ONG Bairro Alegre' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ong).toBe('ONG Bairro Alegre');
+  });
+});
+
 describe('a Marta vê o resultado do mês (H4)', () => {
   // "Agora" depois de todas as datas dos testes: o resultado não depende do dia em que roda.
   beforeEach(() => congelarRelogio('2027-03-01T12:00:00Z'));

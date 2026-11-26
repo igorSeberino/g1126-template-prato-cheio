@@ -240,8 +240,37 @@
           enviarColeta(d, 0);
         };
         li.appendChild(botao);
+        // H3: a ONG que aceitou devolve a doação, com o motivo (D8).
+        const devolver = document.createElement('button');
+        devolver.textContent = 'Devolver';
+        devolver.onclick = () => devolverDoacao(d, devolver);
+        li.appendChild(devolver);
         lista.appendChild(li);
       }
+    }
+
+    // Devolver não tenta de novo sozinho: se falhar, a ONG toca de novo (a doação só volta
+    // à lista quando o servidor confirma).
+    async function devolverDoacao(d, botao) {
+      const ong = document.getElementById('ong').value.trim();
+      if (!ong) {
+        avisar('avisoColeta', 'Informe o nome da sua ONG antes de devolver.');
+        return;
+      }
+      const motivo = (window.prompt(`Por que a ONG está devolvendo "${d.tipo}"? (ex.: sem voluntário hoje)`) || '').trim();
+      if (!motivo) {
+        avisar('avisoColeta', 'Informe o motivo para devolver a doação.');
+        return;
+      }
+      botao.disabled = true;
+      try {
+        const r = await enviar(`/api/doacoes/${d.id}/devolver`, { ong, motivo });
+        if (r.ok) avisar('avisoColeta', `Doação devolvida: ${d.tipo}. Ela voltou para "Doações disponíveis".`, 'ok');
+        else avisar('avisoColeta', r.corpo.erro || 'Não foi possível devolver a doação.');
+      } catch {
+        avisar('avisoColeta', 'Sem conexão: a devolução não foi enviada. Tente de novo.');
+      }
+      carregar();
     }
 
     async function enviarColeta(d, tentativa) {

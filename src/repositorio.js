@@ -94,6 +94,17 @@ export async function cancelar(id) {
   return rows[0];
 }
 
+// H3 — devolve a doação aceita: volta a 'disponivel', sem ONG, com o motivo registrado.
+// O `AND status = 'aceita' AND ong = $3` é a guarda atômica da D1: só devolve se a doação
+// ainda estiver aceita POR ESSA ONG (se foi coletada ou devolvida no meio, não altera nada).
+export async function devolver(id, ong, motivo) {
+  const { rows } = await query(
+    "UPDATE doacoes SET status = 'disponivel', ong = NULL, motivo_devolucao = $1 WHERE id = $2 AND status = 'aceita' AND ong = $3 RETURNING *",
+    [motivo, id, ong]
+  );
+  return rows[0];
+}
+
 // Doações coletadas entre dois instantes (ISO 8601, início incluído, fim excluído).
 // Comparação de texto ISO: funciona igual em qualquer banco, sem função de data.
 export async function listarColetadasEntre(inicio, fim) {
