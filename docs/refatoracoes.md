@@ -46,6 +46,16 @@
   - testes antes da mudança: 37 passando (PostgreSQL 16, `main` em `04f0097`)
   - testes depois da mudança: 37 passando, sem alterar nenhum teste
   - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/43327868680
+- **Segunda aplicação (H3):** a extração veio no PR #25, **antes** da H3. A regra de três
+  apareceu com aceitar, coletar e cancelar; a H3 (`devolver`, D8) é a primeira operação nova
+  que **usa** `buscarOuFalhar` e `exigirTransicao` sem copiar a busca (404 e corrida ficam
+  nas duas funções). `devolver` não chegou a ser a quarta cópia, e a regra que ela acrescenta
+  (só a ONG que aceitou devolve) ficou na própria função, porque é regra da devolução.
+  - testes verdes antes da H3 (`main` com a H2 integrada): 48 passando
+  - testes verdes depois da H3: todos os testes da suíte passando, sem alterar nenhuma
+    asserção existente (os testes novos são todos da H3)
+  - link do CI verde da H3: <preencher com o link do CI do PR da H3>
+- Revisão: <preencher com o link do PR da H3 depois de aberto>
 
 ---
 
