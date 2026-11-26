@@ -323,11 +323,14 @@
         return;
       }
       const ongs = Object.entries(r.por_ong).map(([ong, n]) => `${ong}: ${n}`).join(', ');
-      avisar('relatorio', `${r.coletadas} ${r.coletadas === 1 ? 'doação coletada' : 'doações coletadas'}` +
+      const tempo = typeof r.tempo_medio_horas === 'number'
+        ? `${r.tempo_medio_horas} h`
+        : r.tempo_medio_horas;
+      avisar('relatorio', `${r.publicadas} ${r.publicadas === 1 ? 'publicada' : 'publicadas'}` +
+        ` · ${r.aceitas} ${r.aceitas === 1 ? 'aceita' : 'aceitas'}` +
+        ` · ${r.coletadas} ${r.coletadas === 1 ? 'coletada' : 'coletadas'}` +
         (ongs ? ` (${ongs})` : '') +
-        (r.mediana_horas_publicacao_ate_coleta !== null
-          ? ` · mediana de ${r.mediana_horas_publicacao_ate_coleta} h da publicação à coleta`
-          : ''), 'ok');
+        ` · tempo médio até a coleta: ${tempo}`, 'ok');
     };
 
     carregar();

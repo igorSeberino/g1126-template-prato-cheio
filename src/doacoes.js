@@ -262,11 +262,19 @@ export async function relatorioMensal(mes) {
     (d) => (instante(d.coletada_em) - instante(d.criada_em)) / 3_600_000
   );
   const med = mediana(horas);
+  // H4 (D9): cada número conta no mês do seu evento — publicadas e aceitas pelo `criada_em`,
+  // coletadas e tempo médio pelo `coletada_em`.
+  const publicadas = await repo.contarPublicadasEntre(inicio, fim);
+  const aceitas = await repo.contarAceitasEntre(inicio, fim);
+  const media = horas.length === 0 ? null : horas.reduce((a, b) => a + b, 0) / horas.length;
 
   return {
     mes,
+    publicadas,
+    aceitas,
     coletadas: coletadas.length,
     por_ong: porOng,
+    tempo_medio_horas: media === null ? 'sem coletas no mês' : Math.round(media * 10) / 10,
     mediana_horas_publicacao_ate_coleta: med === null ? null : Math.round(med * 10) / 10
   };
 }

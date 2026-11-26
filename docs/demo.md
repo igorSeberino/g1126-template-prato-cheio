@@ -73,7 +73,8 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    Resultado: aparece *Coleta registrada: Arroz.* e o Arroz some de "Aguardando coleta".
    Em "Minhas doações", o Arroz passa de *aceita por Casa Esperança* para
    *coletada por Rui (aceita por Casa Esperança)*. Para conferir o efeito: escolher o mês
-   atual (`11/2026`) em "Mês" e tocar **Ver relatório** → *1 doação coletada (Casa Esperança: 1)*.
+   atual (`11/2026`) em "Mês" e tocar **Ver relatório** → *2 publicadas · 1 aceita · 1 coletada (Casa Esperança: 1) · tempo médio até a coleta: N h*
+   (H4: os quatro números; o Leite ainda não foi aceito neste ponto da demo).
 6. **Caso de erro: aceitar sem dizer quem é a ONG.** Ação: apagar o texto de "Sua ONG" e
    tocar **Aceitar** na linha do Leite.
    Resultado: aparece *Informe o nome da sua ONG antes de aceitar.* e o Leite continua em

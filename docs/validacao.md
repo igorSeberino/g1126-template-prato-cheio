@@ -38,6 +38,9 @@ tabela acima; cada dono acrescenta as linhas da sua história.
 | **H2** (#37) | **CA1** — Dado que uma doação foi aceita, quando o voluntário confirma a coleta, então ficam gravados o nome dele, o horário e o status `coletada`. | atende | Teste "grava o primeiro nome do voluntário, o horário e o status coletada"; demo, passo 5; CI do PR da H2. |
 | **H2** (#37) | **CA2** — Dado que a doação ainda está disponível, quando alguém tenta confirmar a coleta, então o sistema recusa e nada muda. | atende | Testes "recusa coletar uma doação disponível e não muda nada" e "recusa marcar como coletada uma doação que ainda não foi aceita"; inversão de regra no PR da H2 (2 testes falham); CI do PR da H2. Fora da demo: a tela só mostra o botão em "Aguardando coleta". |
 | **H2** (#37) | **CA3** — Dado que a doação foi coletada, quando o doador consulta "Minhas doações", então ela aparece como coletada. | atende | Teste "a doação coletada aparece como coletada em Minhas doações"; demo, passos 5 e 8; CI do PR da H2. |
+| **H4** (#39) | **CA1** — Dado que em novembro houve 3 publicadas, 2 aceitas e 1 coletada 5 h depois, quando a Marta pede o relatório, então vê 3 / 2 / 1 e tempo médio de 5 h. | atende | Teste "mostra publicadas, aceitas, coletadas e o tempo médio até a coleta" (relógio congelado); demo, passo 5; CI do PR da H4. |
+| **H4** (#39) | **CA2** — Dado um mês sem coleta, quando a Marta pede o relatório, então o tempo médio é "sem coletas no mês" (nem zero, nem erro). | atende | Teste "mês sem coleta mostra "sem coletas no mês" no tempo médio"; CI do PR da H4. Fora da demo. |
+| **H4** (#39) | **CA3** — Dado que uma doação foi publicada em 31/10 e coletada em 01/11, então o teste diz em que mês cada número conta (D9). | atende | Teste "publicada em 31/10 e coletada em 01/11: publicada em outubro, coletada em novembro"; D9; CI do PR da H4. Fora da demo. |
 
 ## Critérios que não atendem — por quê
 
