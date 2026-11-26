@@ -204,6 +204,35 @@ export async function marcarColetada(id, { coletada_em: coletadaEm, voluntario }
   );
 }
 
+// H3 — "a ONG devolve uma doação aceita": desiste da coleta (ex.: sem voluntário hoje) e a
+// doação volta para a lista, sem rastro da ONG. Decisão D8 (docs/projeto.md): motivo e nome
+// da ONG obrigatórios; a mesma ONG pode aceitar de novo. Só quem aceitou pode devolver, e só
+// enquanto estiver aceita (D5). Usa buscarOuFalhar e exigirTransicao, sem copiar a busca.
+// A recusa por campo vazio vem depois da busca, para que id inexistente continue dando 404.
+export async function devolver(id, { ong, motivo } = {}) {
+  const doacao = await buscarOuFalhar(id);
+  const nomeDaOng = comoTexto(ong, 'ong');
+  if (!nomeDaOng) {
+    throw new ErroDeRegra('informe o nome da ONG que está devolvendo');
+  }
+  const textoDoMotivo = comoTexto(motivo, 'motivo');
+  if (!textoDoMotivo) {
+    throw new ErroDeRegra('informe o motivo da devolução');
+  }
+  if (doacao.status !== 'aceita') {
+    throw new ErroDeRegra('só é possível devolver uma doação que está aceita');
+  }
+  if (chaveDaOng(nomeDaOng) !== chaveDaOng(doacao.ong)) {
+    throw new ErroDeRegra('só a ONG que aceitou a doação pode devolvê-la');
+  }
+  // Corrida: a doação pode ter sido coletada entre a leitura e o update. Passa o nome como
+  // está gravado (e não o digitado), para o `ong = $3` do banco casar com "casa esperanca".
+  return exigirTransicao(
+    await repo.devolver(id, doacao.ong, normalizarNomeDaOng(textoDoMotivo)),
+    'só é possível devolver uma doação que está aceita'
+  );
+}
+
 // "O doador cancela uma doação disponível" — desiste ou corrige um erro de publicação
 // antes que uma ONG aceite. Decisão D4 (docs/projeto.md): mesma guarda atômica da D1
 // (`UPDATE ... WHERE status = 'disponivel'`), para que uma ONG que já aceitou não perca a

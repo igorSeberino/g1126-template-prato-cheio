@@ -82,6 +82,8 @@ export async function migrar() {
   await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS doador TEXT');
   // H2 (Trabalho 3): quem buscou a doação. Doações coletadas antes da H2 ficam sem nome (NULL).
   await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS voluntario TEXT');
+  // H3 (Trabalho 3): por que a ONG devolveu a doação (D8). Fica NULL em quem nunca foi devolvida.
+  await conexao().query('ALTER TABLE doacoes ADD COLUMN IF NOT EXISTS motivo_devolucao TEXT');
 }
 
 /**

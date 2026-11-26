@@ -44,7 +44,7 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
 | Tempo | O que mostrar | O que se prova |
 |---|---|---|
 | 0:00–0:20 | O problema em uma frase: "o restaurante tem comida sobrando e a ONG não sabe; quando sabe, outra já foi buscar." | por que o produto existe |
-| 0:20–1:50 | Passos 1 a 5: publicar, ver, aceitar e coletar; passo 8: o doador acompanha | o produto executa ponta a ponta |
+| 0:20–1:50 | Passos 1 a 5: publicar, ver, aceitar e coletar; passo 10: uma devolvida; passo 8: o doador acompanha | o produto executa ponta a ponta |
 | 1:50–2:30 | Passo 6: o erro tratado | o limite foi pensado |
 | 2:30–3:00 | O que falta (abaixo) | vocês sabem onde estão |
 
@@ -93,6 +93,14 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    **Coletada** na linha do Leite.
    Resultado: aparece *Informe o seu nome antes de confirmar a coleta.* e o Leite continua em
    "Aguardando coleta".
+10. **ONG devolve uma doação aceita (H3, ~30 s).** Ação: com o Leite já aceito pela
+   `Casa Esperança` (passo 9), em "Aguardando coleta" tocar **Devolver** na linha do Leite e, no
+   pedido do motivo, digitar `sem voluntário hoje`.
+   Resultado: aparece *Doação devolvida: Leite. Ela voltou para "Doações disponíveis".*; o
+   Leite sai de "Aguardando coleta" e volta a "Doações disponíveis". Caso de erro: tocar
+   **Devolver** com "Sua ONG" vazio mostra *Informe o nome da sua ONG antes de devolver.*
+   (se outra ONG, por exemplo `ONG Bairro Alegre`, tentar devolver, o servidor recusa e a
+   doação continua com a Casa Esperança).
 
 ## O que falta, dito na demo
 

@@ -59,6 +59,11 @@ export function criarApp() {
     res.json(await doacoes.marcarColetada(req.params.id, req.body ?? {}));
   }));
 
+  // H3 — a ONG que aceitou devolve a doação, com o motivo.
+  app.post('/api/doacoes/:id/devolver', rota(async (req, res) => {
+    res.json(await doacoes.devolver(req.params.id, req.body ?? {}));
+  }));
+
   // História #4 — relatório mensal da Marta. Ex.: /api/relatorios/mensal?mes=2026-10
   app.get('/api/relatorios/mensal', rota(async (req, res) => {
     res.json(await doacoes.relatorioMensal(req.query.mes));
