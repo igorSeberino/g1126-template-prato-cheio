@@ -28,6 +28,7 @@
   - testes depois da mudança: 37 passando (PostgreSQL 16): os 36 de antes, com as mesmas
     asserções, mais 1 teste novo da revisão (`responde 404 para id que não é um número`)
   - link da execução do CI verde: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/42130470845
+- Revisão: https://github.com/igorSeberino/g1126-template-prato-cheio/pull/23
 
 ## Refatoração 2 — Transições de status duplicadas em `src/doacoes.js`
 
@@ -54,8 +55,8 @@
   - testes verdes antes da H3 (`main` com a H2 integrada): 48 passando
   - testes verdes depois da H3: todos os testes da suíte passando, sem alterar nenhuma
     asserção existente (os testes novos são todos da H3)
-  - link do CI verde da H3: <preencher com o link do CI do PR da H3>
-- Revisão: <preencher com o link do PR da H3 depois de aberto>
+  - link do CI verde da H3: https://github.com/igorSeberino/g1126-template-prato-cheio/actions/runs/45892528205
+- Revisão: https://github.com/igorSeberino/g1126-template-prato-cheio/pull/44
 
 ---
 

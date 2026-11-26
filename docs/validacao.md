@@ -103,6 +103,9 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
   tornava o critério verdadeiro só no papel. O critério não mudou de texto, mas só passou a ter
   sentido depois da D2 (teste "recusa o aceite sem o nome da ONG e a doação continua disponível";
   demo, passo 6).
+- **Trabalho 3: o CA3 da H4 deixou a regra para uma decisão.** O critério diz que o teste mostra
+  em que mês cada número conta, sem dizer qual; a resposta veio da D9 (`docs/projeto.md`) e só
+  então virou asserção. Os textos dos critérios de H1–H4 são os dos issues #36 a #39.
 - **Nenhum critério da Unidade 1 se mostrou impossível.** O critério 5 mostrou que um critério com
   duas consequências ("recusa" **e** "continua com a primeira") precisa de uma asserção para cada.
 
@@ -118,6 +121,11 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
 - **O voluntário também se identifica só pelo nome, sem login (H2, decisão D7).** O sistema
   confia no nome digitado; não há como conferir que quem tocou em **Coletada** é mesmo quem
   buscou a comida. As coletas feitas antes da H2 aparecem sem o nome do voluntário.
+- **A ONG também se identifica só pelo nome (H3, D8).** Quem digitar "Casa Esperança" pode
+  devolver uma doação aceita por ela. O motivo da devolução não aparece na tela do doador, mas
+  a API ainda devolve a coluna `motivo_devolucao` nas listas (`SELECT *`).
+- **"Aceitas" no relatório da Marta é uma foto de hoje (H4, D9).** Não há horário do aceite:
+  uma doação aceita em outubro e devolvida em novembro sai da conta de outubro.
 
 ## Uso de IA
 
@@ -126,3 +134,12 @@ A issue #29 pede para decidir com o grupo; **não decidido nesta entrega**, só 
   `docs/demo.md`.
 - **Status:** o status final de cada linha é do grupo, na revisão deste PR; a seção
   *Pendente de decisão do grupo* ficou aberta de propósito.
+- **Trabalho 3 (H1–H4):** o Claude Code gerou a primeira versão dos testes, do código e das
+  linhas desta tabela em cada história; o dono conferiu os testes vermelhos antes da
+  implementação, a suíte verde e o CI do PR (seção *Uso de IA* dos PRs #42, #43, #44 e #45).
+- **Um erro da IA que corrigimos (H2, PR #43):** a primeira versão gravava o nome completo do
+  voluntário, com outra mensagem de erro e outro rótulo de campo. O Diego corrigiu para seguir a
+  decisão D7 (só o primeiro nome, *informe o nome do voluntário*, "Seu nome (voluntário)").
+- **Fechamento (#40):** o Claude Code executou o clone limpo e o roteiro da demo no navegador e
+  escreveu a primeira versão das linhas do Trabalho 3 nesta página e na retrospectiva 3; o que
+  travou está em `docs/demo.md` → *Testado por*.

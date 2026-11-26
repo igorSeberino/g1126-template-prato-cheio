@@ -36,8 +36,8 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
 4. Abra `http://localhost:3000` no navegador, em **modo celular** (F12 → ícone de
    dispositivos).
 
-> As validades do roteiro (30/11 e 25/11/2026) precisam estar no futuro: a API recusa doação
-> vencida. Depois de 25/11/2026, troque por datas posteriores.
+> As validades do roteiro (30/11 e 20/12/2026) precisam estar no futuro: a API recusa doação
+> vencida. Depois de 30/11/2026, troque por datas posteriores.
 
 ## Roteiro (3 minutos)
 
@@ -60,7 +60,7 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    `10 kg`, em "Validade / retirar até" escolher `30/11/2026` e tocar **Publicar**.
    Resultado: aparece *Doação publicada: Arroz.*, os campos são limpos e
    *Arroz — 10 kg (até 2026-11-30)* aparece em "Doações disponíveis".
-3. **Doador publica o leite.** Ação: repetir com `Leite`, `12 L`, `25/11/2026`.
+3. **Doador publica o leite.** Ação: repetir com `Leite`, `12 L`, `20/12/2026`.
    Resultado: *Arroz* aparece antes de *Leite* (ordem de publicação).
 4. **ONG aceita o arroz.** Ação: em "Sua ONG" digitar `Casa Esperança` e tocar **Aceitar**
    na linha do Arroz.
@@ -73,7 +73,8 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    Resultado: aparece *Coleta registrada: Arroz.* e o Arroz some de "Aguardando coleta".
    Em "Minhas doações", o Arroz passa de *aceita por Casa Esperança* para
    *coletada por Rui (aceita por Casa Esperança)*. Para conferir o efeito: escolher o mês
-   atual (`11/2026`) em "Mês" e tocar **Ver relatório** → *2 publicadas · 1 aceita · 1 coletada (Casa Esperança: 1) · tempo médio até a coleta: N h*
+   atual (`11/2026`) em "Mês" e tocar **Ver relatório** → *2 publicadas · 1 aceita · 1 coletada (Casa Esperança: 1) · tempo médio até a coleta: 0 h*
+   (o tempo conta da publicação até a coleta: 0 h quando a coleta é feita logo depois de publicar)
    (H4: os quatro números; o Leite ainda não foi aceito neste ponto da demo).
 6. **Caso de erro: aceitar sem dizer quem é a ONG.** Ação: apagar o texto de "Sua ONG" e
    tocar **Aceitar** na linha do Leite.
@@ -86,7 +87,7 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
    Ação: olhar "Minhas doações" (o nome `Padaria Pão Bom` continua em "Seu nome (doador)",
    guardado no navegador). Para conferir que o nome ficou guardado, recarregar a página (F5).
    Resultado: aparecem *Arroz — 10 kg (até 2026-11-30): coletada por Rui (aceita por Casa Esperança)*
-   e *Leite — 12 L (até 2026-11-25): disponível*. Trocando o nome para `Restaurante Sabor
+   e *Leite — 12 L (até 2026-12-20): disponível*. Trocando o nome para `Restaurante Sabor
    Caseiro` (e saindo do campo), a lista mostra *Nenhuma doação publicada por Restaurante
    Sabor Caseiro.*
 9. **Caso de erro: coletar sem dizer quem é o voluntário (H2, opcional, 20 s).** Ação: aceitar
@@ -113,6 +114,17 @@ Funciona **sem internet** (ADR 0002): o PostgreSQL 16 roda instalado no notebook
 
 ## Testado por
 
-Outro integrante executou este roteiro sem ajuda: **[nome]**, em **[data]**.
-O que mudou depois do teste: **[o que travou e como foi corrigido; "nada" se não travou]**.
+Outro integrante executou este roteiro sem ajuda: **Adrian Cesar Gonçalves** (fechamento, #40),
+em **26/11/2026**, num clone novo da `main` (`fbb4453`) fora do OneDrive, seguindo só o README
+(`npm install`, `npm run db:migrar`, `npm test` com todos os testes da suíte passando, `npm start`)
+e a tela num navegador de 603 px de largura (não num celular). Quem tocou nos botões foi o
+Claude Code, no navegador, a pedido dele; no passo 10 a resposta do pedido de motivo foi
+preenchida por script (ver `## Uso de IA` do PR de fechamento).
+O que mudou depois do teste:
+- **Passo 3 travou:** a validade `25/11/2026` do Leite já tinha passado e a API respondeu
+  *a validade 2026-11-25 já passou*. A data virou `20/12/2026` (passos 3 e 8 e o aviso acima).
+- **Passo 5:** o relatório mostrou `tempo médio até a coleta: 0 h`; o `N h` do roteiro virou `0 h`,
+  com a explicação de quando ele muda.
+- **README:** a linha do `npm test` dizia "37 testes"; virou "todos os testes da suíte".
+- Os demais passos (1, 2, 4, 6 a 10) deram o resultado escrito, sem mudança.
 Se ele travou em algum passo, o roteiro está incompleto — corrija antes de entregar.

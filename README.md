@@ -93,7 +93,7 @@ Clone em uma pasta local comum (por exemplo `~/dev/`), **fora** de OneDrive, Goo
 ```bash
 npm install       # só na primeira vez
 npm run db:migrar # cria a tabela no banco pratocheio; imprime "schema criado"
-npm test          # roda os testes no banco pratocheio_teste (37 testes)
+npm test          # roda os testes no banco pratocheio_teste (todos os testes da suíte)
 npm start         # sobe em http://localhost:3000
 npm run dev       # sobe recarregando a cada alteração
 ```
