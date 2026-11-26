@@ -1035,3 +1035,82 @@ describe('ONG devolve uma doação aceita (H3)', () => {
     expect(res.body.ong).toBe('ONG Bairro Alegre');
   });
 });
+
+describe('a Marta vê o resultado do mês (H4)', () => {
+  // "Agora" depois de todas as datas dos testes: o resultado não depende do dia em que roda.
+  beforeEach(() => congelarRelogio('2027-03-01T12:00:00Z'));
+
+  // Publica uma doação com `criada_em` controlado; opcionalmente aceita e coleta.
+  async function doacaoDoMes({ criadaEm, aceita = false, coletadaEm }) {
+    const { body } = await request(app).post('/api/doacoes').send(doacaoValida);
+    await query('UPDATE doacoes SET criada_em = ? WHERE id = ?', [criadaEm, body.id]);
+    if (aceita || coletadaEm) {
+      await request(app).post(`/api/doacoes/${body.id}/aceitar`).send({ ong: 'Casa Esperança' });
+    }
+    if (coletadaEm) {
+      await request(app).post(`/api/doacoes/${body.id}/coletar`)
+        .send({ coletada_em: coletadaEm, voluntario: 'Rui' });
+    }
+    return body.id;
+  }
+  const relatorio = (mes) => request(app).get('/api/relatorios/mensal').query({ mes });
+
+  // CA1
+  // Dado que em novembro houve 3 publicadas, 2 aceitas e 1 coletada 5 h depois da publicação
+  // Quando a Marta pede o relatório de novembro
+  // Então ela vê 3 publicadas, 2 aceitas, 1 coletada e tempo médio de 5 h
+  it('mostra publicadas, aceitas, coletadas e o tempo médio até a coleta', async () => {
+    await doacaoDoMes({ criadaEm: '2026-11-05 12:00:00', coletadaEm: '2026-11-05T17:00:00.000Z' });
+    await doacaoDoMes({ criadaEm: '2026-11-06 12:00:00', aceita: true });
+    await doacaoDoMes({ criadaEm: '2026-11-07 12:00:00' });
+
+    const res = await relatorio('2026-11');
+
+    expect(res.status).toBe(200);
+    expect(res.body.publicadas).toBe(3);
+    expect(res.body.aceitas).toBe(2);
+    expect(res.body.coletadas).toBe(1);
+    expect(res.body.tempo_medio_horas).toBe(5);
+  });
+
+  // CA2
+  // Dado que o mês não teve nenhuma coleta
+  // Quando a Marta pede o relatório
+  // Então o tempo médio diz "sem coletas no mês" (nem zero, nem erro)
+  it('mês sem coleta mostra "sem coletas no mês" no tempo médio', async () => {
+    await doacaoDoMes({ criadaEm: '2026-11-05 12:00:00', aceita: true });
+
+    const res = await relatorio('2026-11');
+
+    expect(res.status).toBe(200);
+    expect(res.body.coletadas).toBe(0);
+    expect(res.body.tempo_medio_horas).toBe('sem coletas no mês');
+  });
+
+  // CA3 — decisão D9 (cada número conta no mês do seu próprio evento)
+  // Dado que uma doação foi publicada em 31/10 (Brasília) e coletada em 01/11
+  // Quando a Marta pede os relatórios de outubro e de novembro
+  // Então em outubro ela é publicada e aceita; em novembro, só coletada
+  it('publicada em 31/10 e coletada em 01/11: publicada em outubro, coletada em novembro', async () => {
+    await doacaoDoMes({ criadaEm: '2026-11-01 01:00:00', coletadaEm: '2026-11-01T13:00:00.000Z' });
+    // 01:00 UTC de 01/11 = 22h de 31/10 em Brasília.
+
+    const outubro = (await relatorio('2026-10')).body;
+    const novembro = (await relatorio('2026-11')).body;
+
+    expect([outubro.publicadas, outubro.aceitas, outubro.coletadas]).toEqual([1, 1, 0]);
+    expect([novembro.publicadas, novembro.aceitas, novembro.coletadas]).toEqual([0, 0, 1]);
+    expect(novembro.tempo_medio_horas).toBe(12);
+  });
+
+  // Limite — mês fora do formato
+  // Dado que o mês chega como "novembro"
+  // Quando a Marta pede o relatório
+  // Então o sistema recusa com 400 e diz o formato esperado
+  it('recusa mês fora do formato AAAA-MM', async () => {
+    const res = await relatorio('novembro');
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/AAAA-MM/);
+  });
+});

@@ -41,6 +41,9 @@ tabela acima; cada dono acrescenta as linhas da sua história.
 | **H3** (#38) | **CA1** — Dado que a Casa Esperança aceitou uma doação, quando ela a devolve com o motivo "sem voluntário hoje", então a doação volta a `disponivel`, sem ONG, e o motivo fica registrado. | atende | Teste "devolve a doação: volta a disponível, sem ONG, com o motivo registrado"; demo, passo 10; CI do PR da H3. |
 | **H3** (#38) | **CA2** — Dado que a doação foi coletada, quando a ONG tenta devolvê-la, então o sistema recusa com mensagem e ela continua coletada. | atende | Teste "recusa devolver uma doação coletada e ela continua coletada"; CI do PR da H3. Fora da demo: a tela só mostra "Devolver" em "Aguardando coleta". |
 | **H3** (#38) | **CA3** — Dado que a Casa Esperança aceitou a doação, quando outra ONG tenta devolvê-la, então o sistema recusa e ela continua aceita pela Casa Esperança. | atende | Teste "recusa a devolução por outra ONG e a doação continua com quem aceitou"; CI do PR da H3. Fora da demo. |
+| **H4** (#39) | **CA1** — Dado que em novembro houve 3 publicadas, 2 aceitas e 1 coletada 5 h depois, quando a Marta pede o relatório, então vê 3 / 2 / 1 e tempo médio de 5 h. | atende | Teste "mostra publicadas, aceitas, coletadas e o tempo médio até a coleta" (relógio congelado); demo, passo 5; CI do PR da H4. |
+| **H4** (#39) | **CA2** — Dado um mês sem coleta, quando a Marta pede o relatório, então o tempo médio é "sem coletas no mês" (nem zero, nem erro). | atende | Teste "mês sem coleta mostra "sem coletas no mês" no tempo médio"; CI do PR da H4. Fora da demo. |
+| **H4** (#39) | **CA3** — Dado que uma doação foi publicada em 31/10 e coletada em 01/11, então o teste diz em que mês cada número conta (D9). | atende | Teste "publicada em 31/10 e coletada em 01/11: publicada em outubro, coletada em novembro"; D9; CI do PR da H4. Fora da demo. |
 
 ## Critérios que não atendem — por quê
 

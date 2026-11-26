@@ -114,3 +114,30 @@ export async function listarColetadasEntre(inicio, fim) {
   );
   return rows;
 }
+
+// H4 — `criada_em` é texto 'AAAA-MM-DD HH:MM:SS' (UTC) e os limites do mês chegam em ISO
+// ('2026-11-01T03:00:00.000Z'). Comparar os dois como texto dá errado, então o limite é
+// convertido para o formato da coluna aqui, no repositório.
+function noFormatoDaCriacao(iso) {
+  return new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+// Doações publicadas entre dois instantes (início incluído, fim excluído), em qualquer situação.
+// `COUNT(*)::int`: o PostgreSQL devolve COUNT como texto ('3'); a conversão fica no SQL.
+export async function contarPublicadasEntre(inicio, fim) {
+  const { rows } = await query(
+    'SELECT COUNT(*)::int AS total FROM doacoes WHERE criada_em >= $1 AND criada_em < $2',
+    [noFormatoDaCriacao(inicio), noFormatoDaCriacao(fim)]
+  );
+  return rows[0].total;
+}
+
+// Das publicadas no período, as que hoje estão aceitas ou coletadas. Não existe horário do
+// aceite (decisão D9), e a devolvida volta a 'disponivel', então não entra.
+export async function contarAceitasEntre(inicio, fim) {
+  const { rows } = await query(
+    "SELECT COUNT(*)::int AS total FROM doacoes WHERE status IN ('aceita', 'coletada') AND criada_em >= $1 AND criada_em < $2",
+    [noFormatoDaCriacao(inicio), noFormatoDaCriacao(fim)]
+  );
+  return rows[0].total;
+}
